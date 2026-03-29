@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, CheckCircle, AlertTriangle, Info, Clock, Check } from 'lucide-react';
+import { Bell, CheckCircle, AlertTriangle, Info, Clock, Check, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Notification {
@@ -34,6 +34,20 @@ export default function Notifications() {
     fetchNotifications();
   };
 
+  const deleteNotification = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this notification?')) {
+      await supabase.from('notifications').delete().eq('id', id);
+      fetchNotifications();
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    if (window.confirm('Are you sure you want to clear all notifications?')) {
+      await supabase.from('notifications').delete().neq('id', '');
+      fetchNotifications();
+    }
+  };
+
   const getIcon = (type: string) => {
     switch(type) {
       case 'info': return <Info className="w-5 h-5 text-blue-500" />;
@@ -62,15 +76,26 @@ export default function Notifications() {
           <h2 className="text-2xl font-bold text-gray-900">Notifications</h2>
           <p className="text-gray-500 mt-1">You have {unreadCount} unread messages.</p>
         </div>
-        {unreadCount > 0 && (
-          <button 
-            onClick={markAllAsRead}
-            className="flex items-center gap-2 text-sm font-medium text-[#00965e] hover:text-[#007a4c] bg-green-50 px-4 py-2 rounded-lg transition-colors"
-          >
-            <Check className="w-4 h-4" />
-            Mark all as read
-          </button>
-        )}
+        <div className="flex gap-2">
+          {unreadCount > 0 && (
+            <button 
+              onClick={markAllAsRead}
+              className="flex items-center gap-2 text-sm font-medium text-[#00965e] hover:text-[#007a4c] bg-green-50 px-4 py-2 rounded-lg transition-colors"
+            >
+              <Check className="w-4 h-4" />
+              Mark all as read
+            </button>
+          )}
+          {notifications.length > 0 && (
+            <button 
+              onClick={clearAllNotifications}
+              className="flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-800 bg-red-50 px-4 py-2 rounded-lg transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Clear all
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -96,14 +121,22 @@ export default function Notifications() {
                 <p className={`text-sm mt-1 ${notification.read ? 'text-gray-500' : 'text-gray-700'}`}>
                   {notification.message}
                 </p>
-                {!notification.read && (
+                <div className="flex items-center gap-3">
+                  {!notification.read && (
+                    <button 
+                      onClick={() => markAsRead(notification.id)}
+                      className="mt-3 text-xs font-medium text-blue-600 hover:text-blue-800"
+                    >
+                      Mark as read
+                    </button>
+                  )}
                   <button 
-                    onClick={() => markAsRead(notification.id)}
-                    className="mt-3 text-xs font-medium text-blue-600 hover:text-blue-800"
+                    onClick={() => deleteNotification(notification.id)}
+                    className="mt-3 text-xs font-medium text-red-600 hover:text-red-800"
                   >
-                    Mark as read
+                    Delete
                   </button>
-                )}
+                </div>
               </div>
               {!notification.read && (
                 <div className="shrink-0 flex items-center">

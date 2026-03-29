@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FileText, Calendar, User, Package } from 'lucide-react';
+import { Search, FileText, Calendar, User, Package, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
 
@@ -60,6 +60,19 @@ export default function DistributionLog() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this distribution log? This will not restore the inventory quantity.')) {
+      try {
+        const { error } = await supabase.from('distributions').delete().eq('id', id);
+        if (error) throw error;
+        fetchLogs();
+      } catch (error) {
+        console.error('Error deleting log:', error);
+        alert('Failed to delete log.');
+      }
+    }
+  };
+
   const filteredLogs = logs.filter(log => 
     log.recipient?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.item?.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -91,13 +104,14 @@ export default function DistributionLog() {
                 <th className="px-6 py-4 font-medium">Item Distributed</th>
                 <th className="px-6 py-4 font-medium">Quantity</th>
                 <th className="px-6 py-4 font-medium">Status</th>
+                <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {loading ? (
-                <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">Loading logs...</td></tr>
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500">Loading logs...</td></tr>
               ) : filteredLogs.length === 0 ? (
-                <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">No distribution logs found.</td></tr>
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500">No distribution logs found.</td></tr>
               ) : (
                 filteredLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-gray-50 transition-colors">
@@ -133,6 +147,15 @@ export default function DistributionLog() {
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         {log.status || 'Completed'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-right text-sm font-medium">
+                      <button 
+                        onClick={() => handleDelete(log.id)}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        title="Delete Log"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))

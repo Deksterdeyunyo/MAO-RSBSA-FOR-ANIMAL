@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, Shield, User as UserIcon, Mail, Phone, Briefcase } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { Search, Plus, Edit2, Trash2, Shield, User as UserIcon, Mail, Phone, Briefcase, Lock, Eye, EyeOff } from 'lucide-react';
+import { supabase, createTempClient } from '../lib/supabase';
 import Modal from '../components/Modal';
 
 interface User {
@@ -12,15 +12,17 @@ interface User {
   role: 'Admin' | 'Technician' | 'Staff' | 'Encoder';
   status: 'Active' | 'Inactive';
   last_login: string | null;
+  password?: string;
 }
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ 
-    name: '', email: '', department: 'Agriculture', phoneNumber: '', role: 'Staff', status: 'Active' 
+    name: '', email: '', department: 'Agriculture', phoneNumber: '', role: 'Staff', status: 'Active', password: '' 
   });
 
   useEffect(() => {
@@ -36,7 +38,22 @@ export default function UserManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const payload = {
+    // If creating a new user, we also need to sign them up in Supabase Auth
+    if (!editingId && formData.password) {
+      const tempClient = createTempClient();
+      const { error: signUpError } = await tempClient.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (signUpError) {
+        console.error('Error signing up user:', signUpError);
+        alert(`Failed to create auth account: ${signUpError.message}`);
+        return;
+      }
+    }
+
+    const payload: any = {
       name: formData.name,
       email: formData.email,
       department: formData.department,
@@ -44,6 +61,10 @@ export default function UserManagement() {
       role: formData.role,
       status: formData.status
     };
+
+    if (formData.password) {
+      payload.password = formData.password;
+    }
 
     let error;
     if (editingId) {
@@ -59,7 +80,7 @@ export default function UserManagement() {
       fetchUsers();
     } else {
       console.error('Error saving user:', error);
-      alert('Failed to save user. Please ensure Supabase is configured.');
+      alert('Failed to save user details. Please ensure Supabase is configured and the users_management table has a password column if you are trying to save it.');
     }
   };
 
@@ -70,7 +91,8 @@ export default function UserManagement() {
       department: user.department || 'Agriculture',
       phoneNumber: user.phone_number || '',
       role: user.role || 'Staff',
-      status: user.status || 'Active'
+      status: user.status || 'Active',
+      password: ''
     });
     setEditingId(user.id);
     setIsModalOpen(true);
@@ -92,7 +114,8 @@ export default function UserManagement() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ name: '', email: '', department: 'Agriculture', phoneNumber: '', role: 'Staff', status: 'Active' });
+    setShowPassword(false);
+    setFormData({ name: '', email: '', department: 'Agriculture', phoneNumber: '', role: 'Staff', status: 'Active', password: '' });
   };
 
   const filteredUsers = users.filter(u => 
@@ -129,6 +152,7 @@ export default function UserManagement() {
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-sm uppercase tracking-wider">
                 <th className="px-6 py-4 font-medium">User Details</th>
                 <th className="px-6 py-4 font-medium">Contact Info</th>
+                <th className="px-6 py-4 font-medium">Password</th>
                 <th className="px-6 py-4 font-medium">Role & Dept</th>
                 <th className="px-6 py-4 font-medium text-center">Status</th>
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
@@ -157,6 +181,9 @@ export default function UserManagement() {
                       <Phone className="w-4 h-4 text-gray-400" />
                       {user.phone_number || 'N/A'}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500 font-mono">
+                    ••••••••
                   </td>
                   <td className="px-6 py-4 text-sm">
                     <div className="flex items-center gap-1.5 font-medium text-gray-900">
@@ -234,8 +261,31 @@ export default function UserManagement() {
                 <option value="Encoder">Encoder</option>
               </select>
             </div>
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {editingId ? "New Password (leave blank to keep current)" : "Initial Password"}
+              </label>
+              <div className="relative">
+                <input 
+                  required={!editingId} 
+                  type={showPassword ? "text" : "password"} 
+                  value={formData.password} 
+                  onChange={e => setFormData({...formData, password: e.target.value})} 
+                  className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" 
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Initial Status</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
               <select required value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]">
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>

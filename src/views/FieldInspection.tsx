@@ -33,7 +33,7 @@ export default function FieldInspection() {
   }, []);
 
   const fetchInspections = async () => {
-    const { data, error } = await supabase.from('inspections').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('field_inspections').select('*').order('created_at', { ascending: false });
     if (data) setInspections(data);
     if (error) console.error('Error fetching inspections:', error);
   };
@@ -56,10 +56,10 @@ export default function FieldInspection() {
 
     let error;
     if (editingId) {
-      const { error: updateError } = await supabase.from('inspections').update(payload).eq('id', editingId);
+      const { error: updateError } = await supabase.from('field_inspections').update(payload).eq('id', editingId);
       error = updateError;
     } else {
-      const { error: insertError } = await supabase.from('inspections').insert([payload]);
+      const { error: insertError } = await supabase.from('field_inspections').insert([payload]);
       error = insertError;
     }
     
@@ -91,7 +91,7 @@ export default function FieldInspection() {
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this inspection record?')) {
-      await supabase.from('inspections').delete().eq('id', id);
+      await supabase.from('field_inspections').delete().eq('id', id);
       fetchInspections();
     }
   };
