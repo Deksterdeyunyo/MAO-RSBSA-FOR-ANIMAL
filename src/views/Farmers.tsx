@@ -22,6 +22,7 @@ interface Farmer {
   livestock_count: number;
   latitude?: number;
   longitude?: number;
+  status?: string;
   livestock_breakdown?: { [key: string]: number };
 }
 
@@ -40,7 +41,7 @@ export default function Farmers() {
     civilStatus: 'Single', education: 'Elementary', householdSize: 1,
     isArBeneficiary: false, isIp: false,
     farmArea: 0, farmType: 'Backyard', livestockCount: 0,
-    latitude: 0, longitude: 0
+    latitude: 0, longitude: 0, status: 'Healthy'
   });
 
   useEffect(() => {
@@ -84,7 +85,8 @@ export default function Farmers() {
       farm_type: formData.farmType,
       livestock_count: formData.livestockCount,
       latitude: formData.latitude || 0,
-      longitude: formData.longitude || 0
+      longitude: formData.longitude || 0,
+      status: formData.status
     };
 
     let error;
@@ -123,7 +125,8 @@ export default function Farmers() {
       farmType: farmer.farm_type || 'Backyard',
       livestockCount: farmer.livestock_count || 0,
       latitude: farmer.latitude || 0,
-      longitude: farmer.longitude || 0
+      longitude: farmer.longitude || 0,
+      status: farmer.status || 'Healthy'
     });
     setEditingId(farmer.id);
     setIsModalOpen(true);
@@ -163,6 +166,19 @@ export default function Farmers() {
     }
   };
 
+  const handleBulkStatusUpdate = async (status: string) => {
+    if (window.confirm(`Update status to ${status} for ${selectedIds.length} selected farmers?`)) {
+      const { error } = await supabase.from('farmers').update({ status }).in('id', selectedIds);
+      if (!error) {
+        setSelectedIds([]);
+        fetchFarmers();
+      } else {
+        console.error('Error in bulk status update:', error);
+        alert('Failed to update status.');
+      }
+    }
+  };
+
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredFarmers.length) {
       setSelectedIds([]);
@@ -186,7 +202,7 @@ export default function Farmers() {
       civilStatus: 'Single', education: 'Elementary', householdSize: 1,
       isArBeneficiary: false, isIp: false,
       farmArea: 0, farmType: 'Backyard', livestockCount: 0,
-      latitude: 0, longitude: 0
+      latitude: 0, longitude: 0, status: 'Healthy'
     });
   };
 
@@ -210,8 +226,19 @@ export default function Farmers() {
             />
           </div>
           {selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 animate-in fade-in slide-in-from-left-2">
-              <span className="text-sm font-bold text-red-700">{selectedIds.length} selected</span>
+            <div className="flex items-center gap-2 bg-[#00965e]/10 px-3 py-1.5 rounded-lg border border-[#00965e]/20 animate-in fade-in slide-in-from-left-2">
+              <span className="text-sm font-bold text-[#00965e]">{selectedIds.length} selected</span>
+              <div className="h-4 w-px bg-gray-300 mx-1" />
+              <select 
+                onChange={(e) => handleBulkStatusUpdate(e.target.value)}
+                className="text-xs bg-white border border-gray-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-[#00965e]"
+                value=""
+              >
+                <option value="" disabled>Update Status</option>
+                <option value="Healthy">Healthy</option>
+                <option value="Warning">Warning</option>
+                <option value="Alert">Alert</option>
+              </select>
               <button 
                 onClick={handleBulkDelete}
                 className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
@@ -248,6 +275,7 @@ export default function Farmers() {
                 <th className="px-6 py-4 font-medium">Farmer Details</th>
                 <th className="px-6 py-4 font-medium">Contact & Location</th>
                 <th className="px-6 py-4 font-medium">Farm Info</th>
+                <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium text-center">Livestock</th>
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
@@ -291,6 +319,14 @@ export default function Farmers() {
                   <td className="px-6 py-4 text-sm text-gray-500">
                     <div>{farmer.farm_type}</div>
                     <div className="text-xs">{farmer.farm_area_sqm} sqm</div>
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      farmer.status === 'Healthy' ? 'bg-green-100 text-green-800' : 
+                      farmer.status === 'Warning' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {farmer.status || 'Healthy'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-center">
                     <div className="flex flex-col items-center gap-1">
@@ -429,7 +465,15 @@ export default function Farmers() {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select required value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]">
+                <option value="Healthy">Healthy</option>
+                <option value="Warning">Warning</option>
+                <option value="Alert">Alert</option>
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
               <input type="number" step="any" value={formData.latitude} onChange={e => setFormData({...formData, latitude: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />

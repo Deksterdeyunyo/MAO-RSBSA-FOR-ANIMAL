@@ -20,6 +20,7 @@ interface HealthRecord {
   remarks: string;
   cost: number;
   technician: string;
+  status: 'Completed' | 'Pending' | 'Cancelled';
 }
 
 export default function HealthServices() {
@@ -34,7 +35,8 @@ export default function HealthServices() {
     farmerName: '', livestockTag: '', species: 'Cattle', 
     type: 'Vaccination', description: '', dosage: '', 
     diagnosis: '', treatmentGiven: '', medicineUsed: '', followUpDate: '',
-    nextSchedule: '', remarks: '', cost: 0, technician: '' 
+    nextSchedule: '', remarks: '', cost: 0, technician: '',
+    status: 'Completed'
   });
 
   useEffect(() => {
@@ -65,7 +67,8 @@ export default function HealthServices() {
       next_schedule: formData.nextSchedule || null,
       remarks: formData.remarks,
       cost: formData.cost,
-      technician: formData.technician
+      technician: formData.technician,
+      status: formData.status
     };
 
     let error;
@@ -102,7 +105,8 @@ export default function HealthServices() {
       nextSchedule: record.next_schedule || '',
       remarks: record.remarks || '',
       cost: record.cost || 0,
-      technician: record.technician || ''
+      technician: record.technician || '',
+      status: record.status || 'Completed'
     });
     setEditingId(record.id);
     setIsModalOpen(true);
@@ -124,6 +128,19 @@ export default function HealthServices() {
       } else {
         console.error('Error in bulk delete:', error);
         alert('Failed to delete some records.');
+      }
+    }
+  };
+
+  const handleBulkStatusUpdate = async (status: string) => {
+    if (window.confirm(`Update status to ${status} for ${selectedIds.length} selected records?`)) {
+      const { error } = await supabase.from('health_records').update({ status }).in('id', selectedIds);
+      if (!error) {
+        setSelectedIds([]);
+        fetchRecords();
+      } else {
+        console.error('Error in bulk status update:', error);
+        alert('Failed to update status.');
       }
     }
   };
@@ -150,7 +167,8 @@ export default function HealthServices() {
       farmerName: '', livestockTag: '', species: 'Cattle', 
       type: 'Vaccination', description: '', dosage: '', 
       diagnosis: '', treatmentGiven: '', medicineUsed: '', followUpDate: '',
-      nextSchedule: '', remarks: '', cost: 0, technician: '' 
+      nextSchedule: '', remarks: '', cost: 0, technician: '',
+      status: 'Completed'
     });
   };
 
@@ -171,6 +189,15 @@ export default function HealthServices() {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch(status) {
+      case 'Completed': return 'bg-green-100 text-green-800';
+      case 'Pending': return 'bg-yellow-100 text-yellow-800';
+      case 'Cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -186,8 +213,19 @@ export default function HealthServices() {
             />
           </div>
           {selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 animate-in fade-in slide-in-from-left-2">
-              <span className="text-sm font-bold text-red-700">{selectedIds.length} selected</span>
+            <div className="flex items-center gap-2 bg-[#00965e]/10 px-3 py-1.5 rounded-lg border border-[#00965e]/20 animate-in fade-in slide-in-from-left-2">
+              <span className="text-sm font-bold text-[#00965e]">{selectedIds.length} selected</span>
+              <div className="h-4 w-px bg-gray-300 mx-1" />
+              <select 
+                onChange={(e) => handleBulkStatusUpdate(e.target.value)}
+                className="text-xs bg-white border border-gray-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-[#00965e]"
+                value=""
+              >
+                <option value="" disabled>Update Status</option>
+                <option value="Pending">Pending</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
               <button 
                 onClick={handleBulkDelete}
                 className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
@@ -237,6 +275,7 @@ export default function HealthServices() {
                 <th className="px-6 py-4 font-medium">Date</th>
                 <th className="px-6 py-4 font-medium">Farmer & Livestock</th>
                 <th className="px-6 py-4 font-medium">Service Type</th>
+                <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium">Details & Cost</th>
                 <th className="px-6 py-4 font-medium">Technician</th>
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
@@ -261,6 +300,11 @@ export default function HealthServices() {
                   <td className="px-6 py-4 text-sm">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(record.type)}`}>
                       {record.type}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(record.status)}`}>
+                      {record.status || 'Completed'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700">
@@ -369,10 +413,18 @@ export default function HealthServices() {
               <input required type="number" min="0" step="0.01" value={formData.cost} onChange={e => setFormData({...formData, cost: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Technician Name</label>
               <input required type="text" value={formData.technician} onChange={e => setFormData({...formData, technician: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select required value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]">
+                <option value="Pending">Pending</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>

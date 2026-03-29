@@ -50,10 +50,6 @@ export default function UserManagement() {
       status: formData.status
     };
 
-    if (formData.password) {
-      payload.password = formData.password;
-    }
-
     // If creating a new user, we also need to sign them up in Supabase Auth
     if (!editingId && formData.password) {
       const tempClient = createTempClient();
@@ -96,8 +92,8 @@ export default function UserManagement() {
       closeModal();
       fetchUsers();
     } else {
-      console.error('Error saving user:', error);
-      alert('Failed to save user details. Please ensure Supabase is configured and the users_management table has a password column if you are trying to save it.');
+      console.error('Error saving user details to database:', error);
+      alert('Failed to save user details to the database. ' + error.message);
     }
   };
 

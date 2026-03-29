@@ -13,6 +13,7 @@ interface InventoryItem {
   expiration_date: string | null;
   supplier: string;
   batch_number: string;
+  status: string;
 }
 
 export default function Inventory() {
@@ -29,7 +30,8 @@ export default function Inventory() {
   const [customCategory, setCustomCategory] = useState('');
   const [formData, setFormData] = useState({ 
     itemName: '', category: '', quantity: 0, unit: 'kg', 
-    reorderLevel: 10, expirationDate: '', supplier: '', batchNumber: '' 
+    reorderLevel: 10, expirationDate: '', supplier: '', batchNumber: '',
+    status: 'In Stock'
   });
 
   useEffect(() => {
@@ -65,7 +67,8 @@ export default function Inventory() {
       reorder_level: formData.reorderLevel,
       expiration_date: formData.expirationDate || null,
       supplier: formData.supplier,
-      batch_number: formData.batchNumber
+      batch_number: formData.batchNumber,
+      status: formData.status
     };
 
     let error;
@@ -95,7 +98,8 @@ export default function Inventory() {
       reorderLevel: item.reorder_level || 10,
       expirationDate: item.expiration_date || '',
       supplier: item.supplier || '',
-      batchNumber: item.batch_number || ''
+      batchNumber: item.batch_number || '',
+      status: item.status || 'In Stock'
     });
     
     // Check if category is custom
@@ -132,6 +136,19 @@ export default function Inventory() {
     }
   };
 
+  const handleBulkStatusUpdate = async (status: string) => {
+    if (window.confirm(`Update status to ${status} for ${selectedIds.length} selected items?`)) {
+      const { error } = await supabase.from('inventory').update({ status }).in('id', selectedIds);
+      if (!error) {
+        setSelectedIds([]);
+        fetchInventory();
+      } else {
+        console.error('Error in bulk status update:', error);
+        alert('Failed to update status.');
+      }
+    }
+  };
+
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredItems.length) {
       setSelectedIds([]);
@@ -149,7 +166,11 @@ export default function Inventory() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ itemName: '', category: '', quantity: 0, unit: 'kg', reorderLevel: 10, expirationDate: '', supplier: '', batchNumber: '' });
+    setFormData({ 
+      itemName: '', category: '', quantity: 0, unit: 'kg', 
+      reorderLevel: 10, expirationDate: '', supplier: '', batchNumber: '',
+      status: 'In Stock'
+    });
     setIsCustomCategory(false);
     setCustomCategory('');
   };
@@ -174,6 +195,17 @@ export default function Inventory() {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch(status?.toLowerCase()) {
+      case 'in stock': return 'bg-green-100 text-green-800';
+      case 'low stock': return 'bg-yellow-100 text-yellow-800';
+      case 'out of stock': return 'bg-red-100 text-red-800';
+      case 'expired': return 'bg-gray-100 text-gray-800';
+      case 'archived': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-blue-100 text-blue-800';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -192,6 +224,18 @@ export default function Inventory() {
             <div className="flex items-center gap-2 bg-[#00965e]/10 px-3 py-1.5 rounded-lg border border-[#00965e]/20 animate-in fade-in slide-in-from-left-2">
               <span className="text-sm font-bold text-[#00965e]">{selectedIds.length} selected</span>
               <div className="h-4 w-px bg-gray-300 mx-1" />
+              <select 
+                onChange={(e) => handleBulkStatusUpdate(e.target.value)}
+                className="text-xs bg-white border border-gray-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-[#00965e]"
+                value=""
+              >
+                <option value="" disabled>Update Status</option>
+                <option value="In Stock">In Stock</option>
+                <option value="Low Stock">Low Stock</option>
+                <option value="Out of Stock">Out of Stock</option>
+                <option value="Expired">Expired</option>
+                <option value="Archived">Archived</option>
+              </select>
               <button 
                 onClick={handleBulkDelete}
                 className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
@@ -265,6 +309,7 @@ export default function Inventory() {
                 </th>
                 <th className="px-6 py-4 font-medium">Item Name & Batch</th>
                 <th className="px-6 py-4 font-medium">Category</th>
+                <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium">Stock Level</th>
                 <th className="px-6 py-4 font-medium">Supplier & Expiry</th>
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
@@ -295,6 +340,11 @@ export default function Inventory() {
                     <td className="px-6 py-4 text-sm">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(item.category)}`}>
                         {item.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                        {item.status || 'In Stock'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm">
@@ -415,13 +465,25 @@ export default function Inventory() {
               <input type="text" value={formData.batchNumber} onChange={e => setFormData({...formData, batchNumber: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]">
+                <option value="In Stock">In Stock</option>
+                <option value="Low Stock">Low Stock</option>
+                <option value="Out of Stock">Out of Stock</option>
+                <option value="Expired">Expired</option>
+                <option value="Archived">Archived</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Expiration Date</label>
               <input type="date" value={formData.expirationDate} onChange={e => setFormData({...formData, expirationDate: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
-            <input type="text" value={formData.supplier} onChange={e => setFormData({...formData, supplier: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
+              <input type="text" value={formData.supplier} onChange={e => setFormData({...formData, supplier: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
           </div>
           <div className="pt-4 flex justify-end gap-3">
             <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
