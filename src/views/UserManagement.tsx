@@ -9,7 +9,7 @@ interface User {
   email: string;
   department: string;
   phone_number: string;
-  role: 'Admin' | 'Technician' | 'Staff';
+  role: 'Admin' | 'Technician' | 'Staff' | 'Encoder';
   status: 'Active' | 'Inactive';
   last_login: string | null;
 }
@@ -18,6 +18,7 @@ export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ 
     name: '', email: '', department: 'Agriculture', phoneNumber: '', role: 'Staff', status: 'Active' 
   });
@@ -34,23 +35,45 @@ export default function UserManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from('users_management').insert([{
+    
+    const payload = {
       name: formData.name,
       email: formData.email,
       department: formData.department,
       phone_number: formData.phoneNumber,
       role: formData.role,
       status: formData.status
-    }]);
+    };
+
+    let error;
+    if (editingId) {
+      const { error: updateError } = await supabase.from('users_management').update(payload).eq('id', editingId);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase.from('users_management').insert([payload]);
+      error = insertError;
+    }
     
     if (!error) {
-      setIsModalOpen(false);
-      setFormData({ name: '', email: '', department: 'Agriculture', phoneNumber: '', role: 'Staff', status: 'Active' });
+      closeModal();
       fetchUsers();
     } else {
-      console.error('Error adding user:', error);
-      alert('Failed to add user. Please ensure Supabase is configured.');
+      console.error('Error saving user:', error);
+      alert('Failed to save user. Please ensure Supabase is configured.');
     }
+  };
+
+  const handleEdit = (user: User) => {
+    setFormData({
+      name: user.name || '',
+      email: user.email || '',
+      department: user.department || 'Agriculture',
+      phoneNumber: user.phone_number || '',
+      role: user.role || 'Staff',
+      status: user.status || 'Active'
+    });
+    setEditingId(user.id);
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -64,6 +87,12 @@ export default function UserManagement() {
     const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
     await supabase.from('users_management').update({ status: newStatus }).eq('id', id);
     fetchUsers();
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData({ name: '', email: '', department: 'Agriculture', phoneNumber: '', role: 'Staff', status: 'Active' });
   };
 
   const filteredUsers = users.filter(u => 
@@ -151,7 +180,7 @@ export default function UserManagement() {
                   </td>
                   <td className="px-6 py-4 text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
+                      <button onClick={() => handleEdit(user)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(user.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
@@ -173,7 +202,7 @@ export default function UserManagement() {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New User">
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit User" : "Add New User"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -202,6 +231,7 @@ export default function UserManagement() {
                 <option value="Admin">Admin</option>
                 <option value="Technician">Technician</option>
                 <option value="Staff">Staff</option>
+                <option value="Encoder">Encoder</option>
               </select>
             </div>
             <div>
@@ -213,8 +243,10 @@ export default function UserManagement() {
             </div>
           </div>
           <div className="pt-4 flex justify-end gap-3">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-[#00965e] text-white rounded-md hover:bg-[#007a4c] transition-colors">Save User</button>
+            <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-[#00965e] text-white rounded-md hover:bg-[#007a4c] transition-colors">
+              {editingId ? "Update User" : "Save User"}
+            </button>
           </div>
         </form>
       </Modal>

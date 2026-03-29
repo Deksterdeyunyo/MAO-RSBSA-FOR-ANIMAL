@@ -23,6 +23,7 @@ export default function HealthServices() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ 
     date: new Date().toISOString().split('T')[0], 
     farmerName: '', livestockTag: '', species: 'Cattle', 
@@ -41,7 +42,8 @@ export default function HealthServices() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from('health_records').insert([{
+    
+    const payload = {
       date: formData.date,
       farmer_name: formData.farmerName,
       livestock_tag: formData.livestockTag,
@@ -53,16 +55,42 @@ export default function HealthServices() {
       remarks: formData.remarks,
       cost: formData.cost,
       technician: formData.technician
-    }]);
+    };
+
+    let error;
+    if (editingId) {
+      const { error: updateError } = await supabase.from('health_records').update(payload).eq('id', editingId);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase.from('health_records').insert([payload]);
+      error = insertError;
+    }
     
     if (!error) {
-      setIsModalOpen(false);
-      setFormData({ date: new Date().toISOString().split('T')[0], farmerName: '', livestockTag: '', species: 'Cattle', type: 'Vaccination', description: '', dosage: '', nextSchedule: '', remarks: '', cost: 0, technician: '' });
+      closeModal();
       fetchRecords();
     } else {
-      console.error('Error adding health record:', error);
-      alert('Failed to add health record. Please ensure Supabase is configured.');
+      console.error('Error saving health record:', error);
+      alert('Failed to save health record. Please ensure Supabase is configured.');
     }
+  };
+
+  const handleEdit = (record: HealthRecord) => {
+    setFormData({
+      date: record.date || new Date().toISOString().split('T')[0],
+      farmerName: record.farmer_name || '',
+      livestockTag: record.livestock_tag || '',
+      species: record.species || 'Cattle',
+      type: record.type || 'Vaccination',
+      description: record.description || '',
+      dosage: record.dosage || '',
+      nextSchedule: record.next_schedule || '',
+      remarks: record.remarks || '',
+      cost: record.cost || 0,
+      technician: record.technician || ''
+    });
+    setEditingId(record.id);
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -70,6 +98,12 @@ export default function HealthServices() {
       await supabase.from('health_records').delete().eq('id', id);
       fetchRecords();
     }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData({ date: new Date().toISOString().split('T')[0], farmerName: '', livestockTag: '', species: 'Cattle', type: 'Vaccination', description: '', dosage: '', nextSchedule: '', remarks: '', cost: 0, technician: '' });
   };
 
   const filteredRecords = records.filter(r => {
@@ -160,7 +194,7 @@ export default function HealthServices() {
                   <td className="px-6 py-4 text-sm text-gray-700">{record.technician}</td>
                   <td className="px-6 py-4 text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
+                      <button onClick={() => handleEdit(record)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(record.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
@@ -182,7 +216,7 @@ export default function HealthServices() {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Record Health Service">
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Health Service" : "Record Health Service"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -249,8 +283,10 @@ export default function HealthServices() {
             </div>
           </div>
           <div className="pt-4 flex justify-end gap-3">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-[#00965e] text-white rounded-md hover:bg-[#007a4c] transition-colors">Save Record</button>
+            <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-[#00965e] text-white rounded-md hover:bg-[#007a4c] transition-colors">
+              {editingId ? "Update Record" : "Save Record"}
+            </button>
           </div>
         </form>
       </Modal>

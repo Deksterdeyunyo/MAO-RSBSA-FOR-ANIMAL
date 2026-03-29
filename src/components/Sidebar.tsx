@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sprout, LayoutDashboard, Users, Dog, Syringe, Package, ClipboardCheck, Map, Bell, UserCog, LogOut, FileText, Box } from 'lucide-react';
+import { Sprout, LayoutDashboard, Users, Dog, Syringe, Package, ClipboardCheck, Map, Bell, UserCog, LogOut, FileText, Box, Calendar } from 'lucide-react';
 import { ViewType } from '../App';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
@@ -7,22 +7,27 @@ import { supabase } from '../lib/supabase';
 interface SidebarProps {
   activeView: ViewType;
   setActiveView: (view: ViewType) => void;
+  userRole?: string;
+  userName?: string;
 }
 
-export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
-  const menuItems: { name: ViewType; icon: React.ElementType }[] = [
-    { name: 'Dashboard', icon: LayoutDashboard },
-    { name: 'Farmers', icon: Users },
-    { name: 'Livestock', icon: Dog },
-    { name: 'Health Services', icon: Syringe },
-    { name: 'Program Distribution', icon: Package },
-    { name: 'Field Inspection', icon: ClipboardCheck },
-    { name: 'Geotagging & Map', icon: Map },
-    { name: 'Inventory', icon: Box },
-    { name: 'Reports', icon: FileText },
-    { name: 'Notifications', icon: Bell },
-    { name: 'User Management', icon: UserCog },
+export default function Sidebar({ activeView, setActiveView, userRole = 'Staff', userName = 'User' }: SidebarProps) {
+  const allMenuItems: { name: ViewType; icon: React.ElementType; roles: string[] }[] = [
+    { name: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
+    { name: 'Farmers', icon: Users, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
+    { name: 'Livestock', icon: Dog, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
+    { name: 'Health Services', icon: Syringe, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
+    { name: 'Program Distribution', icon: Package, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
+    { name: 'Field Inspection', icon: ClipboardCheck, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
+    { name: 'Geotagging & Map', icon: Map, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
+    { name: 'Inventory', icon: Box, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
+    { name: 'Schedule', icon: Calendar, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
+    { name: 'Reports', icon: FileText, roles: ['Admin', 'Technician'] },
+    { name: 'Notifications', icon: Bell, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
+    { name: 'User Management', icon: UserCog, roles: ['Admin'] },
   ];
+
+  const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -37,8 +42,8 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
       
       <div className="px-6 pb-6">
         <p className="text-sm text-emerald-100">Welcome,</p>
-        <p className="text-base font-bold text-white mb-2">Kristal Bandalan</p>
-        <span className="inline-block px-2 py-1 bg-[#004d33] border border-[#008755] text-emerald-100 text-xs font-semibold rounded">ADMIN</span>
+        <p className="text-base font-bold text-white mb-2 truncate" title={userName}>{userName}</p>
+        <span className="inline-block px-2 py-1 bg-[#004d33] border border-[#008755] text-emerald-100 text-xs font-semibold rounded uppercase">{userRole}</span>
       </div>
       
       <nav className="flex-1 overflow-y-auto py-2">

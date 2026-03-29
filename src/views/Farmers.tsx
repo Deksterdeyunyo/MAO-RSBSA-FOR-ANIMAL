@@ -20,6 +20,7 @@ export default function Farmers() {
   const [farmers, setFarmers] = useState<Farmer[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ 
     rsbsaId: '', name: '', birthdate: '', gender: 'Male', 
     address: '', contact: '', farmArea: 0, farmType: 'Backyard', livestockCount: 0 
@@ -37,7 +38,8 @@ export default function Farmers() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from('farmers').insert([{
+    
+    const payload = {
       rsbsa_id: formData.rsbsaId,
       name: formData.name,
       birthdate: formData.birthdate || null,
@@ -47,16 +49,40 @@ export default function Farmers() {
       farm_area_sqm: formData.farmArea,
       farm_type: formData.farmType,
       livestock_count: formData.livestockCount
-    }]);
+    };
+
+    let error;
+    if (editingId) {
+      const { error: updateError } = await supabase.from('farmers').update(payload).eq('id', editingId);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase.from('farmers').insert([payload]);
+      error = insertError;
+    }
     
     if (!error) {
-      setIsModalOpen(false);
-      setFormData({ rsbsaId: '', name: '', birthdate: '', gender: 'Male', address: '', contact: '', farmArea: 0, farmType: 'Backyard', livestockCount: 0 });
+      closeModal();
       fetchFarmers();
     } else {
-      console.error('Error adding farmer:', error);
-      alert('Failed to add farmer. Please ensure Supabase is configured.');
+      console.error('Error saving farmer:', error);
+      alert('Failed to save farmer. Please ensure Supabase is configured.');
     }
+  };
+
+  const handleEdit = (farmer: Farmer) => {
+    setFormData({
+      rsbsaId: farmer.rsbsa_id || '',
+      name: farmer.name || '',
+      birthdate: farmer.birthdate || '',
+      gender: farmer.gender || 'Male',
+      address: farmer.address || '',
+      contact: farmer.contact || '',
+      farmArea: farmer.farm_area_sqm || 0,
+      farmType: farmer.farm_type || 'Backyard',
+      livestockCount: farmer.livestock_count || 0
+    });
+    setEditingId(farmer.id);
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -64,6 +90,12 @@ export default function Farmers() {
       await supabase.from('farmers').delete().eq('id', id);
       fetchFarmers();
     }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData({ rsbsaId: '', name: '', birthdate: '', gender: 'Male', address: '', contact: '', farmArea: 0, farmType: 'Backyard', livestockCount: 0 });
   };
 
   const filteredFarmers = farmers.filter(f => 
@@ -137,7 +169,7 @@ export default function Farmers() {
                   </td>
                   <td className="px-6 py-4 text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
+                      <button onClick={() => handleEdit(farmer)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(farmer.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
@@ -159,7 +191,7 @@ export default function Farmers() {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Farmer">
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Farmer" : "Add New Farmer"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -213,8 +245,10 @@ export default function Farmers() {
             </div>
           </div>
           <div className="pt-4 flex justify-end gap-3">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-[#00965e] text-white rounded-md hover:bg-[#007a4c] transition-colors">Save Farmer</button>
+            <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-[#00965e] text-white rounded-md hover:bg-[#007a4c] transition-colors">
+              {editingId ? "Update Farmer" : "Save Farmer"}
+            </button>
           </div>
         </form>
       </Modal>

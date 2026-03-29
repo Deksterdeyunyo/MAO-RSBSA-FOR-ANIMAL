@@ -13,29 +13,61 @@ import Notifications from './views/Notifications';
 import UserManagement from './views/UserManagement';
 import Login from './views/Login';
 import Reports from './views/Reports';
+import Schedule from './views/Schedule';
 import { supabase } from './lib/supabase';
 
-export type ViewType = 'Dashboard' | 'Farmers' | 'Livestock' | 'Health Services' | 'Program Distribution' | 'Field Inspection' | 'Geotagging & Map' | 'Inventory' | 'Notifications' | 'User Management' | 'Reports';
+export type ViewType = 'Dashboard' | 'Farmers' | 'Livestock' | 'Health Services' | 'Program Distribution' | 'Field Inspection' | 'Geotagging & Map' | 'Inventory' | 'Notifications' | 'User Management' | 'Reports' | 'Schedule';
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
+  const [userRole, setUserRole] = useState<string>('Staff');
+  const [userName, setUserName] = useState<string>('');
   const [activeView, setActiveView] = useState<ViewType>('Dashboard');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setLoading(false);
+      if (session?.user?.email) {
+        fetchUserRole(session.user.email);
+      } else {
+        setLoading(false);
+      }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session?.user?.email) {
+        fetchUserRole(session.user.email);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUserRole = async (email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users_management')
+        .select('role, name')
+        .eq('email', email)
+        .single();
+      
+      if (data) {
+        setUserRole(data.role);
+        setUserName(data.name);
+      } else {
+        // Fallback if user not found in users_management
+        setUserRole('Admin'); // Defaulting to Admin for the preview if not found to prevent lockout
+      }
+    } catch (err) {
+      console.error('Error fetching user role:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return <div className="flex items-center justify-center h-screen bg-gray-50 text-gray-500">Loading...</div>;
@@ -58,6 +90,7 @@ export default function App() {
       case 'Notifications': return <Notifications />;
       case 'User Management': return <UserManagement />;
       case 'Reports': return <Reports />;
+      case 'Schedule': return <Schedule />;
       default: return <Dashboard />;
     }
   };
@@ -65,7 +98,7 @@ export default function App() {
   return (
     <div className="flex h-screen print:h-auto bg-gray-100 font-sans text-gray-900">
       <div className="print:hidden h-full">
-        <Sidebar activeView={activeView} setActiveView={setActiveView} />
+        <Sidebar activeView={activeView} setActiveView={setActiveView} userRole={userRole} userName={userName || session.user.email} />
       </div>
       <div className="flex-1 flex flex-col overflow-hidden print:overflow-visible">
         <div className="print:hidden">

@@ -23,6 +23,7 @@ export default function Inventory() {
   const [customFilterCategory, setCustomFilterCategory] = useState('');
   const [isCustomFilter, setIsCustomFilter] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategory, setCustomCategory] = useState('');
   const [formData, setFormData] = useState({ 
@@ -55,7 +56,7 @@ export default function Inventory() {
       return;
     }
 
-    const { error } = await supabase.from('inventory').insert([{
+    const payload = {
       item_name: formData.itemName,
       category: finalCategory,
       quantity: formData.quantity,
@@ -64,18 +65,50 @@ export default function Inventory() {
       expiration_date: formData.expirationDate || null,
       supplier: formData.supplier,
       batch_number: formData.batchNumber
-    }]);
+    };
+
+    let error;
+    if (editingId) {
+      const { error: updateError } = await supabase.from('inventory').update(payload).eq('id', editingId);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase.from('inventory').insert([payload]);
+      error = insertError;
+    }
     
     if (!error) {
-      setIsModalOpen(false);
-      setFormData({ itemName: '', category: '', quantity: 0, unit: 'kg', reorderLevel: 10, expirationDate: '', supplier: '', batchNumber: '' });
-      setIsCustomCategory(false);
-      setCustomCategory('');
+      closeModal();
       fetchInventory();
     } else {
-      console.error('Error adding inventory item:', error);
-      alert('Failed to add item. Please ensure Supabase is configured.');
+      console.error('Error saving inventory item:', error);
+      alert('Failed to save item. Please ensure Supabase is configured.');
     }
+  };
+
+  const handleEdit = (item: InventoryItem) => {
+    setFormData({
+      itemName: item.item_name || '',
+      category: item.category || '',
+      quantity: item.quantity || 0,
+      unit: item.unit || 'kg',
+      reorderLevel: item.reorder_level || 10,
+      expirationDate: item.expiration_date || '',
+      supplier: item.supplier || '',
+      batchNumber: item.batch_number || ''
+    });
+    
+    // Check if category is custom
+    if (item.category && !categories.includes(item.category)) {
+      setIsCustomCategory(true);
+      setCustomCategory(item.category);
+      setFormData(prev => ({ ...prev, category: 'Custom' }));
+    } else {
+      setIsCustomCategory(false);
+      setCustomCategory('');
+    }
+
+    setEditingId(item.id);
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -83,6 +116,14 @@ export default function Inventory() {
       await supabase.from('inventory').delete().eq('id', id);
       fetchInventory();
     }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData({ itemName: '', category: '', quantity: 0, unit: 'kg', reorderLevel: 10, expirationDate: '', supplier: '', batchNumber: '' });
+    setIsCustomCategory(false);
+    setCustomCategory('');
   };
 
   const filteredItems = items.filter(i => {
@@ -214,7 +255,7 @@ export default function Inventory() {
                     </td>
                     <td className="px-6 py-4 text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
+                        <button onClick={() => handleEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button onClick={() => handleDelete(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
@@ -237,7 +278,7 @@ export default function Inventory() {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add Inventory Item">
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Inventory Item" : "Add Inventory Item"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
             <label className="block text-sm font-bold text-gray-900 mb-2">Category (Required First) *</label>
@@ -294,15 +335,7 @@ export default function Inventory() {
           <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
-              <input 
-                required 
-                type="text" 
-                value={formData.itemName} 
-                onChange={e => setFormData({...formData, itemName: e.target.value})} 
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e] disabled:bg-gray-100 disabled:cursor-not-allowed" 
-                disabled={!formData.category && !isCustomCategory}
-                placeholder={(!formData.category && !isCustomCategory) ? "Please select a category first" : "Enter item name"}
-              />
+              <input required type="text" value={formData.itemName} onChange={e => setFormData({...formData, itemName: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
@@ -334,8 +367,10 @@ export default function Inventory() {
             <input type="text" value={formData.supplier} onChange={e => setFormData({...formData, supplier: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
           </div>
           <div className="pt-4 flex justify-end gap-3">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-[#00965e] text-white rounded-md hover:bg-[#007a4c] transition-colors">Save Item</button>
+            <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-[#00965e] text-white rounded-md hover:bg-[#007a4c] transition-colors">
+              {editingId ? "Update Item" : "Save Item"}
+            </button>
           </div>
         </form>
       </Modal>

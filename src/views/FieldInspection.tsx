@@ -22,6 +22,7 @@ export default function FieldInspection() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ 
     date: new Date().toISOString().split('T')[0], farmerName: '', location: '', inspector: '', 
     purpose: '', findings: '', recommendations: '', farmConditionRating: 3, nextInspectionDate: '', status: 'Pending' 
@@ -39,7 +40,8 @@ export default function FieldInspection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from('inspections').insert([{
+    
+    const payload = {
       date: formData.date,
       farmer_name: formData.farmerName,
       location: formData.location,
@@ -50,16 +52,41 @@ export default function FieldInspection() {
       farm_condition_rating: formData.farmConditionRating,
       next_inspection_date: formData.nextInspectionDate || null,
       status: formData.status
-    }]);
+    };
+
+    let error;
+    if (editingId) {
+      const { error: updateError } = await supabase.from('inspections').update(payload).eq('id', editingId);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase.from('inspections').insert([payload]);
+      error = insertError;
+    }
     
     if (!error) {
-      setIsModalOpen(false);
-      setFormData({ date: new Date().toISOString().split('T')[0], farmerName: '', location: '', inspector: '', purpose: '', findings: '', recommendations: '', farmConditionRating: 3, nextInspectionDate: '', status: 'Pending' });
+      closeModal();
       fetchInspections();
     } else {
-      console.error('Error adding inspection:', error);
-      alert('Failed to add inspection. Please ensure Supabase is configured.');
+      console.error('Error saving inspection:', error);
+      alert('Failed to save inspection. Please ensure Supabase is configured.');
     }
+  };
+
+  const handleEdit = (inspection: Inspection) => {
+    setFormData({
+      date: inspection.date || new Date().toISOString().split('T')[0],
+      farmerName: inspection.farmer_name || '',
+      location: inspection.location || '',
+      inspector: inspection.inspector || '',
+      purpose: inspection.purpose || '',
+      findings: inspection.findings || '',
+      recommendations: inspection.recommendations || '',
+      farmConditionRating: inspection.farm_condition_rating || 3,
+      nextInspectionDate: inspection.next_inspection_date || '',
+      status: inspection.status || 'Pending'
+    });
+    setEditingId(inspection.id);
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -67,6 +94,12 @@ export default function FieldInspection() {
       await supabase.from('inspections').delete().eq('id', id);
       fetchInspections();
     }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData({ date: new Date().toISOString().split('T')[0], farmerName: '', location: '', inspector: '', purpose: '', findings: '', recommendations: '', farmConditionRating: 3, nextInspectionDate: '', status: 'Pending' });
   };
 
   const filteredInspections = inspections.filter(i => {
@@ -164,7 +197,7 @@ export default function FieldInspection() {
                   </td>
                   <td className="px-6 py-4 text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
+                      <button onClick={() => handleEdit(inspection)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(inspection.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
@@ -186,7 +219,7 @@ export default function FieldInspection() {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Log Field Inspection">
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Field Inspection" : "Log Field Inspection"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -239,8 +272,10 @@ export default function FieldInspection() {
             </div>
           </div>
           <div className="pt-4 flex justify-end gap-3">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-[#00965e] text-white rounded-md hover:bg-[#007a4c] transition-colors">Save Inspection</button>
+            <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-[#00965e] text-white rounded-md hover:bg-[#007a4c] transition-colors">
+              {editingId ? "Update Inspection" : "Save Inspection"}
+            </button>
           </div>
         </form>
       </Modal>

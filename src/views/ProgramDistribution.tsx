@@ -22,6 +22,7 @@ export default function ProgramDistribution() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ 
     programName: '', fundingSource: 'LGU', itemType: 'Feeds', quantity: 0, unit: 'Sacks', 
     date: new Date().toISOString().split('T')[0], location: '', distributorName: '', beneficiariesCount: 0, status: 'Planned' 
@@ -39,7 +40,8 @@ export default function ProgramDistribution() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from('distributions').insert([{
+    
+    const payload = {
       program_name: formData.programName,
       funding_source: formData.fundingSource,
       item_type: formData.itemType,
@@ -50,16 +52,41 @@ export default function ProgramDistribution() {
       distributor_name: formData.distributorName,
       beneficiaries_count: formData.beneficiariesCount,
       status: formData.status
-    }]);
+    };
+
+    let error;
+    if (editingId) {
+      const { error: updateError } = await supabase.from('distributions').update(payload).eq('id', editingId);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase.from('distributions').insert([payload]);
+      error = insertError;
+    }
     
     if (!error) {
-      setIsModalOpen(false);
-      setFormData({ programName: '', fundingSource: 'LGU', itemType: 'Feeds', quantity: 0, unit: 'Sacks', date: new Date().toISOString().split('T')[0], location: '', distributorName: '', beneficiariesCount: 0, status: 'Planned' });
+      closeModal();
       fetchDistributions();
     } else {
-      console.error('Error adding distribution:', error);
-      alert('Failed to add program. Please ensure Supabase is configured.');
+      console.error('Error saving distribution:', error);
+      alert('Failed to save program. Please ensure Supabase is configured.');
     }
+  };
+
+  const handleEdit = (dist: Distribution) => {
+    setFormData({
+      programName: dist.program_name || '',
+      fundingSource: dist.funding_source || 'LGU',
+      itemType: dist.item_type || 'Feeds',
+      quantity: dist.quantity || 0,
+      unit: dist.unit || 'Sacks',
+      date: dist.date || new Date().toISOString().split('T')[0],
+      location: dist.location || '',
+      distributorName: dist.distributor_name || '',
+      beneficiariesCount: dist.beneficiaries_count || 0,
+      status: dist.status || 'Planned'
+    });
+    setEditingId(dist.id);
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -67,6 +94,12 @@ export default function ProgramDistribution() {
       await supabase.from('distributions').delete().eq('id', id);
       fetchDistributions();
     }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData({ programName: '', fundingSource: 'LGU', itemType: 'Feeds', quantity: 0, unit: 'Sacks', date: new Date().toISOString().split('T')[0], location: '', distributorName: '', beneficiariesCount: 0, status: 'Planned' });
   };
 
   const filteredDistributions = distributions.filter(d => {
@@ -164,7 +197,7 @@ export default function ProgramDistribution() {
                   </td>
                   <td className="px-6 py-4 text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
+                      <button onClick={() => handleEdit(dist)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(dist.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
@@ -186,7 +219,7 @@ export default function ProgramDistribution() {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="New Distribution Program">
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Distribution Program" : "New Distribution Program"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -251,8 +284,10 @@ export default function ProgramDistribution() {
             </div>
           </div>
           <div className="pt-4 flex justify-end gap-3">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-[#00965e] text-white rounded-md hover:bg-[#007a4c] transition-colors">Save Program</button>
+            <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-[#00965e] text-white rounded-md hover:bg-[#007a4c] transition-colors">
+              {editingId ? "Update Program" : "Save Program"}
+            </button>
           </div>
         </form>
       </Modal>
