@@ -58,6 +58,10 @@ export default function App() {
       if (data) {
         setUserRole(data.role);
         setUserName(data.name);
+        // If user is Encoder, set default view to Farmers
+        if (data.role === 'Encoder') {
+          setActiveView('Farmers');
+        }
       } else {
         // Fallback if user not found in users_management
         setUserRole('Admin'); // Defaulting to Admin for the preview if not found to prevent lockout
@@ -78,15 +82,34 @@ export default function App() {
   }
 
   const renderView = () => {
+    // Role-based view protection
+    const restrictedViews: Record<string, string[]> = {
+      'User Management': ['Admin'],
+      'Reports': ['Admin', 'Technician'],
+      'Dashboard': ['Admin', 'Technician', 'Staff'],
+      'Geotagging & Map': ['Admin', 'Technician', 'Staff'],
+      'Inventory': ['Admin', 'Technician', 'Staff'],
+      'Schedule': ['Admin', 'Technician', 'Staff'],
+      'Notifications': ['Admin', 'Technician', 'Staff'],
+    };
+
+    const allowedRoles = restrictedViews[activeView];
+    if (allowedRoles && !allowedRoles.includes(userRole)) {
+      return <div className="flex flex-col items-center justify-center h-full text-gray-500">
+        <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+        <p>You do not have permission to view this page.</p>
+      </div>;
+    }
+
     switch (activeView) {
       case 'Dashboard': return <Dashboard />;
-      case 'Farmers': return <Farmers />;
-      case 'Livestock': return <Livestock />;
-      case 'Health Services': return <HealthServices />;
-      case 'Program Distribution': return <ProgramDistribution />;
-      case 'Field Inspection': return <FieldInspection />;
-      case 'Geotagging & Map': return <Geotagging />;
-      case 'Inventory': return <Inventory />;
+      case 'Farmers': return <Farmers userRole={userRole} />;
+      case 'Livestock': return <Livestock userRole={userRole} />;
+      case 'Health Services': return <HealthServices userRole={userRole} />;
+      case 'Program Distribution': return <ProgramDistribution userRole={userRole} />;
+      case 'Field Inspection': return <FieldInspection userRole={userRole} />;
+      case 'Geotagging & Map': return <Geotagging userRole={userRole} />;
+      case 'Inventory': return <Inventory userRole={userRole} />;
       case 'Notifications': return <Notifications />;
       case 'User Management': return <UserManagement />;
       case 'Reports': return <Reports />;

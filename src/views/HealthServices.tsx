@@ -23,7 +23,7 @@ interface HealthRecord {
   status: 'Completed' | 'Pending' | 'Cancelled';
 }
 
-export default function HealthServices() {
+export default function HealthServices({ userRole }: { userRole?: string }) {
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
@@ -40,6 +40,8 @@ export default function HealthServices() {
     nextSchedule: '', remarks: '', cost: 0, technician: '',
     status: 'Completed'
   });
+
+  const isEncoder = userRole === 'Encoder';
 
   useEffect(() => {
     fetchRecords();
@@ -226,7 +228,7 @@ export default function HealthServices() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          {selectedIds.length > 0 && (
+          {!isEncoder && selectedIds.length > 0 && (
             <div className="flex items-center gap-2 bg-[#00965e]/10 px-3 py-1.5 rounded-lg border border-[#00965e]/20 animate-in fade-in slide-in-from-left-2">
               <span className="text-sm font-bold text-[#00965e]">{selectedIds.length} selected</span>
               <div className="h-4 w-px bg-gray-300 mx-1" />
@@ -278,14 +280,16 @@ export default function HealthServices() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-sm uppercase tracking-wider">
-                <th className="px-6 py-4 font-medium w-10">
-                  <input 
-                    type="checkbox" 
-                    className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
-                    checked={selectedIds.length === filteredRecords.length && filteredRecords.length > 0}
-                    onChange={toggleSelectAll}
-                  />
-                </th>
+                {!isEncoder && (
+                  <th className="px-6 py-4 font-medium w-10">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                      checked={selectedIds.length === filteredRecords.length && filteredRecords.length > 0}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
+                )}
                 <th className="px-6 py-4 font-medium">Date</th>
                 <th className="px-6 py-4 font-medium">Farmer & Livestock</th>
                 <th className="px-6 py-4 font-medium">Service Type</th>
@@ -298,14 +302,16 @@ export default function HealthServices() {
             <tbody className="divide-y divide-gray-200">
               {filteredRecords.map((record) => (
                 <tr key={record.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(record.id) ? 'bg-green-50/50' : ''}`}>
-                  <td className="px-6 py-4">
-                    <input 
-                      type="checkbox" 
-                      className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
-                      checked={selectedIds.includes(record.id)}
-                      onChange={() => toggleSelect(record.id)}
-                    />
-                  </td>
+                  {!isEncoder && (
+                    <td className="px-6 py-4">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                        checked={selectedIds.includes(record.id)}
+                        onChange={() => toggleSelect(record.id)}
+                      />
+                    </td>
+                  )}
                   <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">{new Date(record.date).toLocaleDateString()}</td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{record.farmer_name}</div>
@@ -334,9 +340,11 @@ export default function HealthServices() {
                       <button onClick={() => handleEdit(record)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(record)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {!isEncoder && (
+                        <button onClick={() => handleDelete(record)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

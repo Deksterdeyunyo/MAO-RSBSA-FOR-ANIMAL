@@ -16,17 +16,17 @@ export default function Sidebar({ activeView, setActiveView, userRole = 'Staff',
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const allMenuItems: { name: ViewType; icon: React.ElementType; roles: string[] }[] = [
-    { name: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
+    { name: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Technician', 'Staff'] },
     { name: 'Farmers', icon: Users, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
     { name: 'Livestock', icon: Dog, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
     { name: 'Health Services', icon: Syringe, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
     { name: 'Program Distribution', icon: Package, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
     { name: 'Field Inspection', icon: ClipboardCheck, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
-    { name: 'Geotagging & Map', icon: Map, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
-    { name: 'Inventory', icon: Box, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
-    { name: 'Schedule', icon: Calendar, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
+    { name: 'Geotagging & Map', icon: Map, roles: ['Admin', 'Technician', 'Staff'] },
+    { name: 'Inventory', icon: Box, roles: ['Admin', 'Technician', 'Staff'] },
+    { name: 'Schedule', icon: Calendar, roles: ['Admin', 'Technician', 'Staff'] },
     { name: 'Reports', icon: FileText, roles: ['Admin', 'Technician'] },
-    { name: 'Notifications', icon: Bell, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
+    { name: 'Notifications', icon: Bell, roles: ['Admin', 'Technician', 'Staff'] },
     { name: 'User Management', icon: UserCog, roles: ['Admin'] },
   ];
 

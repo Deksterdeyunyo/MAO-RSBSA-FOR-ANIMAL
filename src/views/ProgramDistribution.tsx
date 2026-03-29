@@ -21,7 +21,7 @@ interface Distribution {
   status: 'Completed' | 'Ongoing' | 'Planned';
 }
 
-export default function ProgramDistribution() {
+export default function ProgramDistribution({ userRole }: { userRole?: string }) {
   const [distributions, setDistributions] = useState<Distribution[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
@@ -36,6 +36,8 @@ export default function ProgramDistribution() {
     batchNumber: '', distributionPoint: '', receivedByProxy: false, proxyName: '',
     status: 'Planned' 
   });
+
+  const isEncoder = userRole === 'Encoder';
 
   useEffect(() => {
     fetchDistributions();
@@ -205,7 +207,7 @@ export default function ProgramDistribution() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          {selectedIds.length > 0 && (
+          {!isEncoder && selectedIds.length > 0 && (
             <div className="flex items-center gap-2 bg-[#00965e]/10 px-3 py-1.5 rounded-lg border border-[#00965e]/20 animate-in fade-in slide-in-from-left-2">
               <span className="text-sm font-bold text-[#00965e]">{selectedIds.length} selected</span>
               <div className="h-4 w-px bg-gray-300 mx-1" />
@@ -256,14 +258,16 @@ export default function ProgramDistribution() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-sm uppercase tracking-wider">
-                <th className="px-6 py-4 font-medium w-10">
-                  <input 
-                    type="checkbox" 
-                    className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
-                    checked={selectedIds.length === filteredDistributions.length && filteredDistributions.length > 0}
-                    onChange={toggleSelectAll}
-                  />
-                </th>
+                {!isEncoder && (
+                  <th className="px-6 py-4 font-medium w-10">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                      checked={selectedIds.length === filteredDistributions.length && filteredDistributions.length > 0}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
+                )}
                 <th className="px-6 py-4 font-medium">Program Name</th>
                 <th className="px-6 py-4 font-medium">Items & Quantity</th>
                 <th className="px-6 py-4 font-medium">Logistics</th>
@@ -275,14 +279,16 @@ export default function ProgramDistribution() {
             <tbody className="divide-y divide-gray-200">
               {filteredDistributions.map((dist) => (
                 <tr key={dist.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(dist.id) ? 'bg-green-50/50' : ''}`}>
-                  <td className="px-6 py-4">
-                    <input 
-                      type="checkbox" 
-                      className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
-                      checked={selectedIds.includes(dist.id)}
-                      onChange={() => toggleSelect(dist.id)}
-                    />
-                  </td>
+                  {!isEncoder && (
+                    <td className="px-6 py-4">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                        checked={selectedIds.includes(dist.id)}
+                        onChange={() => toggleSelect(dist.id)}
+                      />
+                    </td>
+                  )}
                   <td className="px-6 py-4">
                     <div className="text-sm font-semibold text-gray-900">{dist.program_name}</div>
                     <div className="text-xs text-gray-500 mt-1">Funding: {dist.funding_source}</div>
@@ -314,9 +320,11 @@ export default function ProgramDistribution() {
                       <button onClick={() => handleEdit(dist)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(dist)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {!isEncoder && (
+                        <button onClick={() => handleDelete(dist)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

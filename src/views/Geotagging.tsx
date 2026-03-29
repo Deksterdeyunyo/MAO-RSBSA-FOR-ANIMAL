@@ -69,7 +69,7 @@ function FitBounds({ locations, trigger }: { locations: FarmLocation[], trigger:
   return null;
 }
 
-export default function Geotagging() {
+export default function Geotagging({ userRole }: { userRole?: string }) {
   const [locations, setLocations] = useState<FarmLocation[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -85,6 +85,8 @@ export default function Geotagging() {
   const [addressSearch, setAddressSearch] = useState('');
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
   const [fitTrigger, setFitTrigger] = useState(0);
+
+  const isEncoder = userRole === 'Encoder';
 
   useEffect(() => {
     fetchLocations();
@@ -452,16 +454,18 @@ export default function Geotagging() {
                             <User className="w-3 h-3" />
                             Profile
                           </button>
-                          <button 
-                            className="flex-1 py-2 bg-white text-blue-600 border border-blue-200 text-xs font-bold rounded-lg hover:bg-blue-50 transition-all active:scale-95 flex items-center justify-center gap-1"
-                            onClick={() => {
-                              setSelectedFarmer(loc);
-                              setIsGeotaggingMode(true);
-                            }}
-                          >
-                            <Navigation className="w-3 h-3" />
-                            Geotag
-                          </button>
+                          {!isEncoder && (
+                            <button 
+                              className="flex-1 py-2 bg-white text-blue-600 border border-blue-200 text-xs font-bold rounded-lg hover:bg-blue-50 transition-all active:scale-95 flex items-center justify-center gap-1"
+                              onClick={() => {
+                                setSelectedFarmer(loc);
+                                setIsGeotaggingMode(true);
+                              }}
+                            >
+                              <Navigation className="w-3 h-3" />
+                              Geotag
+                            </button>
+                          )}
                         </div>
                       </div>
                     </Popup>
@@ -613,19 +617,21 @@ export default function Geotagging() {
             </div>
 
             <div className="pt-4 flex gap-3">
-              <button 
-                onClick={() => {
-                  setIsProfileModalOpen(false);
-                  setIsGeotaggingMode(true);
-                }}
-                className="flex-1 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
-              >
-                <Navigation className="w-4 h-4" />
-                Update Geotag
-              </button>
+              {!isEncoder && (
+                <button 
+                  onClick={() => {
+                    setIsProfileModalOpen(false);
+                    setIsGeotaggingMode(true);
+                  }}
+                  className="flex-1 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <Navigation className="w-4 h-4" />
+                  Update Geotag
+                </button>
+              )}
               <button 
                 onClick={() => setIsProfileModalOpen(false)}
-                className="px-6 py-2.5 bg-gray-100 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-200 transition-all active:scale-95"
+                className={`${isEncoder ? 'flex-1' : 'px-6'} py-2.5 bg-gray-100 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-200 transition-all active:scale-95`}
               >
                 Close
               </button>

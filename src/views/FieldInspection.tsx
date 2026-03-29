@@ -21,7 +21,7 @@ interface Inspection {
   status: 'Pending' | 'Completed' | 'Follow-up Required';
 }
 
-export default function FieldInspection() {
+export default function FieldInspection({ userRole }: { userRole?: string }) {
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
@@ -36,6 +36,8 @@ export default function FieldInspection() {
     weatherCondition: 'Sunny', farmAreaSqm: 0, waterSource: '', biosecurityLevel: 'Medium',
     status: 'Pending' 
   });
+
+  const isEncoder = userRole === 'Encoder';
 
   useEffect(() => {
     fetchInspections();
@@ -206,7 +208,7 @@ export default function FieldInspection() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          {selectedIds.length > 0 && (
+          {!isEncoder && selectedIds.length > 0 && (
             <div className="flex items-center gap-2 bg-[#00965e]/10 px-3 py-1.5 rounded-lg border border-[#00965e]/20 animate-in fade-in slide-in-from-left-2">
               <span className="text-sm font-bold text-[#00965e]">{selectedIds.length} selected</span>
               <div className="h-4 w-px bg-gray-300 mx-1" />
@@ -257,14 +259,16 @@ export default function FieldInspection() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-sm uppercase tracking-wider">
-                <th className="px-6 py-4 font-medium w-10">
-                  <input 
-                    type="checkbox" 
-                    className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
-                    checked={selectedIds.length === filteredInspections.length && filteredInspections.length > 0}
-                    onChange={toggleSelectAll}
-                  />
-                </th>
+                {!isEncoder && (
+                  <th className="px-6 py-4 font-medium w-10">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                      checked={selectedIds.length === filteredInspections.length && filteredInspections.length > 0}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
+                )}
                 <th className="px-6 py-4 font-medium">Date & Inspector</th>
                 <th className="px-6 py-4 font-medium">Farmer & Location</th>
                 <th className="px-6 py-4 font-medium">Purpose & Findings</th>
@@ -276,14 +280,16 @@ export default function FieldInspection() {
             <tbody className="divide-y divide-gray-200">
               {filteredInspections.map((inspection) => (
                 <tr key={inspection.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(inspection.id) ? 'bg-green-50/50' : ''}`}>
-                  <td className="px-6 py-4">
-                    <input 
-                      type="checkbox" 
-                      className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
-                      checked={selectedIds.includes(inspection.id)}
-                      onChange={() => toggleSelect(inspection.id)}
-                    />
-                  </td>
+                  {!isEncoder && (
+                    <td className="px-6 py-4">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                        checked={selectedIds.includes(inspection.id)}
+                        onChange={() => toggleSelect(inspection.id)}
+                      />
+                    </td>
+                  )}
                   <td className="px-6 py-4 text-sm text-gray-700">
                     <div className="font-medium text-gray-900">{new Date(inspection.date).toLocaleDateString()}</div>
                     <div className="text-xs text-gray-500 mt-1">{inspection.inspector}</div>
@@ -314,9 +320,11 @@ export default function FieldInspection() {
                       <button onClick={() => handleEdit(inspection)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(inspection)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {!isEncoder && (
+                        <button onClick={() => handleDelete(inspection)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

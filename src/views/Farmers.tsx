@@ -26,7 +26,7 @@ interface Farmer {
   livestock_breakdown?: { [key: string]: number };
 }
 
-export default function Farmers() {
+export default function Farmers({ userRole }: { userRole?: string }) {
   const [farmers, setFarmers] = useState<Farmer[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -45,6 +45,8 @@ export default function Farmers() {
     farmArea: 0, farmType: 'Backyard', livestockCount: 0,
     latitude: 0, longitude: 0, status: 'Healthy'
   });
+
+  const isEncoder = userRole === 'Encoder';
 
   useEffect(() => {
     fetchFarmers();
@@ -239,7 +241,7 @@ export default function Farmers() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          {selectedIds.length > 0 && (
+          {!isEncoder && selectedIds.length > 0 && (
             <div className="flex items-center gap-2 bg-[#00965e]/10 px-3 py-1.5 rounded-lg border border-[#00965e]/20 animate-in fade-in slide-in-from-left-2">
               <span className="text-sm font-bold text-[#00965e]">{selectedIds.length} selected</span>
               <div className="h-4 w-px bg-gray-300 mx-1" />
@@ -277,14 +279,16 @@ export default function Farmers() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-sm uppercase tracking-wider">
-                <th className="px-6 py-4 font-medium w-10">
-                  <input 
-                    type="checkbox" 
-                    className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
-                    checked={selectedIds.length === filteredFarmers.length && filteredFarmers.length > 0}
-                    onChange={toggleSelectAll}
-                  />
-                </th>
+                {!isEncoder && (
+                  <th className="px-6 py-4 font-medium w-10">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                      checked={selectedIds.length === filteredFarmers.length && filteredFarmers.length > 0}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
+                )}
                 <th className="px-6 py-4 font-medium">RSBSA ID</th>
                 <th className="px-6 py-4 font-medium">Farmer Details</th>
                 <th className="px-6 py-4 font-medium">Contact & Location</th>
@@ -297,14 +301,16 @@ export default function Farmers() {
             <tbody className="divide-y divide-gray-200">
               {filteredFarmers.map((farmer) => (
                 <tr key={farmer.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(farmer.id) ? 'bg-green-50/50' : ''}`}>
-                  <td className="px-6 py-4">
-                    <input 
-                      type="checkbox" 
-                      className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
-                      checked={selectedIds.includes(farmer.id)}
-                      onChange={() => toggleSelect(farmer.id)}
-                    />
-                  </td>
+                  {!isEncoder && (
+                    <td className="px-6 py-4">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                        checked={selectedIds.includes(farmer.id)}
+                        onChange={() => toggleSelect(farmer.id)}
+                      />
+                    </td>
+                  )}
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">{farmer.rsbsa_id}</td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900 font-semibold">{farmer.name}</div>
@@ -366,9 +372,11 @@ export default function Farmers() {
                       <button onClick={() => handleEdit(farmer)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(farmer)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {!isEncoder && (
+                        <button onClick={() => handleDelete(farmer)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
