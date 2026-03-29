@@ -11,6 +11,10 @@ interface ScheduleEvent {
   time: string;
   location: string;
   program_type: string;
+  assigned_to: string;
+  priority: 'Low' | 'Medium' | 'High';
+  reminder_sent: boolean;
+  notes: string;
   status: 'Upcoming' | 'Ongoing' | 'Completed' | 'Cancelled';
 }
 
@@ -25,6 +29,10 @@ export default function Schedule() {
     time: '',
     location: '',
     program_type: 'Distribution',
+    assigned_to: '',
+    priority: 'Medium',
+    reminder_sent: false,
+    notes: '',
     status: 'Upcoming'
   });
 
@@ -41,12 +49,26 @@ export default function Schedule() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const payload = {
+      title: formData.title,
+      description: formData.description,
+      date: formData.date,
+      time: formData.time,
+      location: formData.location,
+      program_type: formData.program_type,
+      assigned_to: formData.assigned_to,
+      priority: formData.priority,
+      reminder_sent: formData.reminder_sent,
+      notes: formData.notes,
+      status: formData.status
+    };
+
     let error;
     if (editingId) {
-      const { error: updateError } = await supabase.from('schedules').update(formData).eq('id', editingId);
+      const { error: updateError } = await supabase.from('schedules').update(payload).eq('id', editingId);
       error = updateError;
     } else {
-      const { error: insertError } = await supabase.from('schedules').insert([formData]);
+      const { error: insertError } = await supabase.from('schedules').insert([payload]);
       error = insertError;
     }
     
@@ -67,6 +89,10 @@ export default function Schedule() {
       time: event.time || '',
       location: event.location || '',
       program_type: event.program_type || 'Distribution',
+      assigned_to: event.assigned_to || '',
+      priority: event.priority || 'Medium',
+      reminder_sent: !!event.reminder_sent,
+      notes: event.notes || '',
       status: event.status || 'Upcoming'
     });
     setEditingId(event.id);
@@ -83,7 +109,11 @@ export default function Schedule() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ title: '', description: '', date: '', time: '', location: '', program_type: 'Distribution', status: 'Upcoming' });
+    setFormData({ 
+      title: '', description: '', date: '', time: '', location: '', 
+      program_type: 'Distribution', assigned_to: '', priority: 'Medium', 
+      reminder_sent: false, notes: '', status: 'Upcoming' 
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -145,6 +175,15 @@ export default function Schedule() {
                 <MapPin className="w-4 h-4 text-gray-400" />
                 <span>{event.location}</span>
               </div>
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-gray-400" />
+                <span>Assigned: {event.assigned_to || 'Unassigned'}</span>
+              </div>
+              {event.priority === 'High' && (
+                <div className="mt-2 text-[10px] font-bold text-red-600 uppercase tracking-wider">
+                  High Priority
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -201,6 +240,28 @@ export default function Schedule() {
                 <option value="Cancelled">Cancelled</option>
               </select>
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+              <input type="text" value={formData.assigned_to} onChange={e => setFormData({...formData, assigned_to: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+              <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value as any})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]">
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <textarea rows={2} value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]"></textarea>
+          </div>
+          <div className="flex items-center gap-2 py-2">
+            <input type="checkbox" checked={formData.reminder_sent} onChange={e => setFormData({...formData, reminder_sent: e.target.checked})} className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded" />
+            <label className="text-sm font-medium text-gray-700">Reminder Sent?</label>
           </div>
           <div className="pt-4 flex justify-end gap-3">
             <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>

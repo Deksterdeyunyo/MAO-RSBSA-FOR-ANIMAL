@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 interface User {
   id: string;
   name: string;
+  full_name: string;
   email: string;
   department: string;
   phone_number: string;
@@ -19,10 +20,11 @@ export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ 
-    name: '', email: '', department: 'Agriculture', phoneNumber: '', role: 'Staff', status: 'Active', password: '' 
+    name: '', fullName: '', email: '', department: 'Agriculture', phoneNumber: '', role: 'Staff', status: 'Active', password: '' 
   });
 
   useEffect(() => {
@@ -55,6 +57,7 @@ export default function UserManagement() {
 
     const payload: any = {
       name: formData.name,
+      full_name: formData.fullName,
       email: formData.email,
       department: formData.department,
       phone_number: formData.phoneNumber,
@@ -87,6 +90,7 @@ export default function UserManagement() {
   const handleEdit = (user: User) => {
     setFormData({
       name: user.name || '',
+      fullName: user.full_name || '',
       email: user.email || '',
       department: user.department || 'Agriculture',
       phoneNumber: user.phone_number || '',
@@ -105,6 +109,46 @@ export default function UserManagement() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} selected users?`)) {
+      const { error } = await supabase.from('users_management').delete().in('id', selectedIds);
+      if (!error) {
+        setSelectedIds([]);
+        fetchUsers();
+      } else {
+        console.error('Error in bulk delete:', error);
+        alert('Failed to delete some records.');
+      }
+    }
+  };
+
+  const handleBulkStatusUpdate = async (status: string) => {
+    if (window.confirm(`Update status to ${status} for ${selectedIds.length} selected users?`)) {
+      const { error } = await supabase.from('users_management').update({ status }).in('id', selectedIds);
+      if (!error) {
+        setSelectedIds([]);
+        fetchUsers();
+      } else {
+        console.error('Error in bulk status update:', error);
+        alert('Failed to update status.');
+      }
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredUsers.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredUsers.map(u => u.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
   const toggleStatus = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
     await supabase.from('users_management').update({ status: newStatus }).eq('id', id);
@@ -115,7 +159,7 @@ export default function UserManagement() {
     setIsModalOpen(false);
     setEditingId(null);
     setShowPassword(false);
-    setFormData({ name: '', email: '', department: 'Agriculture', phoneNumber: '', role: 'Staff', status: 'Active', password: '' });
+    setFormData({ name: '', fullName: '', email: '', department: 'Agriculture', phoneNumber: '', role: 'Staff', status: 'Active', password: '' });
   };
 
   const filteredUsers = users.filter(u => 
@@ -126,15 +170,39 @@ export default function UserManagement() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input 
-            type="text" 
-            placeholder="Search users by name or email..." 
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00965e] focus:border-[#00965e] outline-none transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input 
+              type="text" 
+              placeholder="Search users by name or email..." 
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00965e] focus:border-[#00965e] outline-none transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 bg-[#00965e]/10 px-3 py-1.5 rounded-lg border border-[#00965e]/20 animate-in fade-in slide-in-from-left-2">
+              <span className="text-sm font-bold text-[#00965e]">{selectedIds.length} selected</span>
+              <div className="h-4 w-px bg-gray-300 mx-1" />
+              <select 
+                onChange={(e) => handleBulkStatusUpdate(e.target.value)}
+                className="text-xs bg-white border border-gray-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-[#00965e]"
+                value=""
+              >
+                <option value="" disabled>Update Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+              <button 
+                onClick={handleBulkDelete}
+                className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                title="Bulk Delete"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
@@ -150,6 +218,14 @@ export default function UserManagement() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-sm uppercase tracking-wider">
+                <th className="px-6 py-4 font-medium w-10">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                    checked={selectedIds.length === filteredUsers.length && filteredUsers.length > 0}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="px-6 py-4 font-medium">User Details</th>
                 <th className="px-6 py-4 font-medium">Contact Info</th>
                 <th className="px-6 py-4 font-medium">Password</th>
@@ -160,7 +236,15 @@ export default function UserManagement() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={user.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(user.id) ? 'bg-green-50/50' : ''}`}>
+                  <td className="px-6 py-4">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                      checked={selectedIds.includes(user.id)}
+                      onChange={() => toggleSelect(user.id)}
+                    />
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
@@ -168,6 +252,7 @@ export default function UserManagement() {
                       </div>
                       <div>
                         <div className="text-sm font-semibold text-gray-900">{user.name}</div>
+                        <div className="text-[10px] text-gray-400 font-medium">{user.full_name}</div>
                         <div className="text-xs text-gray-500 mt-0.5">Last login: {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}</div>
                       </div>
                     </div>
@@ -233,18 +318,18 @@ export default function UserManagement() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
               <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-              <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <input required type="text" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-              <input required type="text" value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+              <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
@@ -252,6 +337,10 @@ export default function UserManagement() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+              <input required type="text" value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
               <select required value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as any})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]">
@@ -261,6 +350,8 @@ export default function UserManagement() {
                 <option value="Encoder">Encoder</option>
               </select>
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {editingId ? "New Password (leave blank to keep current)" : "Initial Password"}
@@ -282,8 +373,6 @@ export default function UserManagement() {
                 </button>
               </div>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
               <select required value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]">

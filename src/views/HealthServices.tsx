@@ -12,6 +12,10 @@ interface HealthRecord {
   type: 'Vaccination' | 'Treatment' | 'Deworming' | 'Checkup';
   description: string;
   dosage: string;
+  diagnosis: string;
+  treatment_given: string;
+  medicine_used: string;
+  follow_up_date: string;
   next_schedule: string;
   remarks: string;
   cost: number;
@@ -23,11 +27,14 @@ export default function HealthServices() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ 
     date: new Date().toISOString().split('T')[0], 
     farmerName: '', livestockTag: '', species: 'Cattle', 
-    type: 'Vaccination', description: '', dosage: '', nextSchedule: '', remarks: '', cost: 0, technician: '' 
+    type: 'Vaccination', description: '', dosage: '', 
+    diagnosis: '', treatmentGiven: '', medicineUsed: '', followUpDate: '',
+    nextSchedule: '', remarks: '', cost: 0, technician: '' 
   });
 
   useEffect(() => {
@@ -51,6 +58,10 @@ export default function HealthServices() {
       type: formData.type,
       description: formData.description,
       dosage: formData.dosage,
+      diagnosis: formData.diagnosis,
+      treatment_given: formData.treatmentGiven,
+      medicine_used: formData.medicineUsed,
+      follow_up_date: formData.followUpDate || null,
       next_schedule: formData.nextSchedule || null,
       remarks: formData.remarks,
       cost: formData.cost,
@@ -84,6 +95,10 @@ export default function HealthServices() {
       type: record.type || 'Vaccination',
       description: record.description || '',
       dosage: record.dosage || '',
+      diagnosis: record.diagnosis || '',
+      treatmentGiven: record.treatment_given || '',
+      medicineUsed: record.medicine_used || '',
+      followUpDate: record.follow_up_date || '',
       nextSchedule: record.next_schedule || '',
       remarks: record.remarks || '',
       cost: record.cost || 0,
@@ -100,10 +115,43 @@ export default function HealthServices() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} selected records?`)) {
+      const { error } = await supabase.from('health_records').delete().in('id', selectedIds);
+      if (!error) {
+        setSelectedIds([]);
+        fetchRecords();
+      } else {
+        console.error('Error in bulk delete:', error);
+        alert('Failed to delete some records.');
+      }
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredRecords.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredRecords.map(r => r.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ date: new Date().toISOString().split('T')[0], farmerName: '', livestockTag: '', species: 'Cattle', type: 'Vaccination', description: '', dosage: '', nextSchedule: '', remarks: '', cost: 0, technician: '' });
+    setFormData({ 
+      date: new Date().toISOString().split('T')[0], 
+      farmerName: '', livestockTag: '', species: 'Cattle', 
+      type: 'Vaccination', description: '', dosage: '', 
+      diagnosis: '', treatmentGiven: '', medicineUsed: '', followUpDate: '',
+      nextSchedule: '', remarks: '', cost: 0, technician: '' 
+    });
   };
 
   const filteredRecords = records.filter(r => {
@@ -126,8 +174,8 @@ export default function HealthServices() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex flex-1 gap-4 w-full">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input 
               type="text" 
@@ -137,20 +185,32 @@ export default function HealthServices() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="relative">
-            <select 
-              className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e] focus:border-[#00965e]"
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-            >
-              <option value="All">All Types</option>
-              <option value="Vaccination">Vaccination</option>
-              <option value="Treatment">Treatment</option>
-              <option value="Deworming">Deworming</option>
-              <option value="Checkup">Checkup</option>
-            </select>
-            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-          </div>
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 animate-in fade-in slide-in-from-left-2">
+              <span className="text-sm font-bold text-red-700">{selectedIds.length} selected</span>
+              <button 
+                onClick={handleBulkDelete}
+                className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                title="Bulk Delete"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="relative">
+          <select 
+            className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e] focus:border-[#00965e]"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+          >
+            <option value="All">All Types</option>
+            <option value="Vaccination">Vaccination</option>
+            <option value="Treatment">Treatment</option>
+            <option value="Deworming">Deworming</option>
+            <option value="Checkup">Checkup</option>
+          </select>
+          <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
@@ -166,6 +226,14 @@ export default function HealthServices() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-sm uppercase tracking-wider">
+                <th className="px-6 py-4 font-medium w-10">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                    checked={selectedIds.length === filteredRecords.length && filteredRecords.length > 0}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="px-6 py-4 font-medium">Date</th>
                 <th className="px-6 py-4 font-medium">Farmer & Livestock</th>
                 <th className="px-6 py-4 font-medium">Service Type</th>
@@ -176,7 +244,15 @@ export default function HealthServices() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredRecords.map((record) => (
-                <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={record.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(record.id) ? 'bg-green-50/50' : ''}`}>
+                  <td className="px-6 py-4">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                      checked={selectedIds.includes(record.id)}
+                      onChange={() => toggleSelect(record.id)}
+                    />
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">{new Date(record.date).toLocaleDateString()}</td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{record.farmer_name}</div>
@@ -188,8 +264,11 @@ export default function HealthServices() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700">
-                    <div className="truncate max-w-xs">{record.description}</div>
-                    <div className="text-xs text-gray-500 mt-1">Dosage: {record.dosage || 'N/A'} • Cost: ₱{record.cost}</div>
+                    <div className="truncate max-w-xs font-medium">{record.description}</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {record.diagnosis && <span className="text-red-500 font-bold">Dx: {record.diagnosis} • </span>}
+                      Dosage: {record.dosage || 'N/A'} • Cost: ₱{record.cost}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700">{record.technician}</td>
                   <td className="px-6 py-4 text-right text-sm font-medium">
@@ -263,6 +342,24 @@ export default function HealthServices() {
             <textarea required rows={2} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]"></textarea>
           </div>
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Diagnosis</label>
+              <input type="text" value={formData.diagnosis} onChange={e => setFormData({...formData, diagnosis: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Medicine Used</label>
+              <input type="text" value={formData.medicineUsed} onChange={e => setFormData({...formData, medicineUsed: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Treatment Given</label>
+            <textarea rows={2} value={formData.treatmentGiven} onChange={e => setFormData({...formData, treatmentGiven: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]"></textarea>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Follow-up Date</label>
+              <input type="date" value={formData.followUpDate} onChange={e => setFormData({...formData, followUpDate: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Next Schedule</label>
               <input type="date" value={formData.nextSchedule} onChange={e => setFormData({...formData, nextSchedule: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />

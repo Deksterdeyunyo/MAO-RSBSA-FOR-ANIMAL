@@ -14,6 +14,10 @@ interface Inspection {
   recommendations: string;
   farm_condition_rating: number;
   next_inspection_date: string;
+  weather_condition: string;
+  farm_area_sqm: number;
+  water_source: string;
+  biosecurity_level: 'Low' | 'Medium' | 'High';
   status: 'Pending' | 'Completed' | 'Follow-up Required';
 }
 
@@ -22,10 +26,13 @@ export default function FieldInspection() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ 
     date: new Date().toISOString().split('T')[0], farmerName: '', location: '', inspector: '', 
-    purpose: '', findings: '', recommendations: '', farmConditionRating: 3, nextInspectionDate: '', status: 'Pending' 
+    purpose: '', findings: '', recommendations: '', farmConditionRating: 3, nextInspectionDate: '', 
+    weatherCondition: 'Sunny', farmAreaSqm: 0, waterSource: '', biosecurityLevel: 'Medium',
+    status: 'Pending' 
   });
 
   useEffect(() => {
@@ -51,6 +58,10 @@ export default function FieldInspection() {
       recommendations: formData.recommendations,
       farm_condition_rating: formData.farmConditionRating,
       next_inspection_date: formData.nextInspectionDate || null,
+      weather_condition: formData.weatherCondition,
+      farm_area_sqm: formData.farmAreaSqm,
+      water_source: formData.waterSource,
+      biosecurity_level: formData.biosecurityLevel,
       status: formData.status
     };
 
@@ -83,6 +94,10 @@ export default function FieldInspection() {
       recommendations: inspection.recommendations || '',
       farmConditionRating: inspection.farm_condition_rating || 3,
       nextInspectionDate: inspection.next_inspection_date || '',
+      weatherCondition: inspection.weather_condition || 'Sunny',
+      farmAreaSqm: inspection.farm_area_sqm || 0,
+      waterSource: inspection.water_source || '',
+      biosecurityLevel: inspection.biosecurity_level || 'Medium',
       status: inspection.status || 'Pending'
     });
     setEditingId(inspection.id);
@@ -96,10 +111,55 @@ export default function FieldInspection() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} selected inspection records?`)) {
+      const { error } = await supabase.from('field_inspections').delete().in('id', selectedIds);
+      if (!error) {
+        setSelectedIds([]);
+        fetchInspections();
+      } else {
+        console.error('Error in bulk delete:', error);
+        alert('Failed to delete some records.');
+      }
+    }
+  };
+
+  const handleBulkStatusUpdate = async (status: string) => {
+    if (window.confirm(`Update status to ${status} for ${selectedIds.length} selected inspection records?`)) {
+      const { error } = await supabase.from('field_inspections').update({ status }).in('id', selectedIds);
+      if (!error) {
+        setSelectedIds([]);
+        fetchInspections();
+      } else {
+        console.error('Error in bulk status update:', error);
+        alert('Failed to update status.');
+      }
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredInspections.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredInspections.map(i => i.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ date: new Date().toISOString().split('T')[0], farmerName: '', location: '', inspector: '', purpose: '', findings: '', recommendations: '', farmConditionRating: 3, nextInspectionDate: '', status: 'Pending' });
+    setFormData({ 
+      date: new Date().toISOString().split('T')[0], farmerName: '', location: '', inspector: '', 
+      purpose: '', findings: '', recommendations: '', farmConditionRating: 3, nextInspectionDate: '', 
+      weatherCondition: 'Sunny', farmAreaSqm: 0, waterSource: '', biosecurityLevel: 'Medium',
+      status: 'Pending' 
+    });
   };
 
   const filteredInspections = inspections.filter(i => {
@@ -121,8 +181,8 @@ export default function FieldInspection() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex flex-1 gap-4 w-full">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input 
               type="text" 
@@ -132,19 +192,42 @@ export default function FieldInspection() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="relative">
-            <select 
-              className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e] focus:border-[#00965e]"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="All">All Status</option>
-              <option value="Completed">Completed</option>
-              <option value="Pending">Pending</option>
-              <option value="Follow-up Required">Follow-up Required</option>
-            </select>
-            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-          </div>
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 bg-[#00965e]/10 px-3 py-1.5 rounded-lg border border-[#00965e]/20 animate-in fade-in slide-in-from-left-2">
+              <span className="text-sm font-bold text-[#00965e]">{selectedIds.length} selected</span>
+              <div className="h-4 w-px bg-gray-300 mx-1" />
+              <select 
+                onChange={(e) => handleBulkStatusUpdate(e.target.value)}
+                className="text-xs bg-white border border-gray-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-[#00965e]"
+                value=""
+              >
+                <option value="" disabled>Update Status</option>
+                <option value="Pending">Pending</option>
+                <option value="Completed">Completed</option>
+                <option value="Follow-up Required">Follow-up Required</option>
+              </select>
+              <button 
+                onClick={handleBulkDelete}
+                className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                title="Bulk Delete"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="relative">
+          <select 
+            className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e] focus:border-[#00965e]"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="All">All Status</option>
+            <option value="Completed">Completed</option>
+            <option value="Pending">Pending</option>
+            <option value="Follow-up Required">Follow-up Required</option>
+          </select>
+          <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
@@ -160,6 +243,14 @@ export default function FieldInspection() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-sm uppercase tracking-wider">
+                <th className="px-6 py-4 font-medium w-10">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                    checked={selectedIds.length === filteredInspections.length && filteredInspections.length > 0}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="px-6 py-4 font-medium">Date & Inspector</th>
                 <th className="px-6 py-4 font-medium">Farmer & Location</th>
                 <th className="px-6 py-4 font-medium">Purpose & Findings</th>
@@ -170,7 +261,15 @@ export default function FieldInspection() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredInspections.map((inspection) => (
-                <tr key={inspection.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={inspection.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(inspection.id) ? 'bg-green-50/50' : ''}`}>
+                  <td className="px-6 py-4">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                      checked={selectedIds.includes(inspection.id)}
+                      onChange={() => toggleSelect(inspection.id)}
+                    />
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-700">
                     <div className="font-medium text-gray-900">{new Date(inspection.date).toLocaleDateString()}</div>
                     <div className="text-xs text-gray-500 mt-1">{inspection.inspector}</div>
@@ -180,6 +279,7 @@ export default function FieldInspection() {
                     <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
                       <MapPin className="w-3 h-3" /> {inspection.location}
                     </div>
+                    <div className="text-[10px] text-blue-600 mt-1">Weather: {inspection.weather_condition} • Area: {inspection.farm_area_sqm}sqm</div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700">
                     <div className="font-medium">{inspection.purpose}</div>
@@ -268,6 +368,30 @@ export default function FieldInspection() {
                 <option value="Pending">Pending</option>
                 <option value="Completed">Completed</option>
                 <option value="Follow-up Required">Follow-up Required</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Weather Condition</label>
+              <input type="text" value={formData.weatherCondition} onChange={e => setFormData({...formData, weatherCondition: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Farm Area (sqm)</label>
+              <input type="number" value={formData.farmAreaSqm} onChange={e => setFormData({...formData, farmAreaSqm: parseInt(e.target.value)})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Water Source</label>
+              <input type="text" value={formData.waterSource} onChange={e => setFormData({...formData, waterSource: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Biosecurity Level</label>
+              <select value={formData.biosecurityLevel} onChange={e => setFormData({...formData, biosecurityLevel: e.target.value as any})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]">
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
               </select>
             </div>
           </div>

@@ -1,8 +1,9 @@
-import React from 'react';
-import { Sprout, LayoutDashboard, Users, Dog, Syringe, Package, ClipboardCheck, Map, Bell, UserCog, LogOut, FileText, Box, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sprout, LayoutDashboard, Users, Dog, Syringe, Package, ClipboardCheck, Map, Bell, UserCog, LogOut, FileText, Box, Calendar, AlertCircle } from 'lucide-react';
 import { ViewType } from '../App';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
+import Modal from './Modal';
 
 interface SidebarProps {
   activeView: ViewType;
@@ -12,6 +13,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeView, setActiveView, userRole = 'Staff', userName = 'User' }: SidebarProps) {
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
   const allMenuItems: { name: ViewType; icon: React.ElementType; roles: string[] }[] = [
     { name: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
     { name: 'Farmers', icon: Users, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
@@ -73,13 +76,37 @@ export default function Sidebar({ activeView, setActiveView, userRole = 'Staff',
       
       <div className="p-4 border-t border-[#007a50]">
         <button 
-          onClick={handleLogout}
+          onClick={() => setIsLogoutModalOpen(true)}
           className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-emerald-50 hover:bg-[#007a50] transition-colors"
         >
           <LogOut className="w-5 h-5 text-emerald-200" />
           Sign Out
         </button>
       </div>
+
+      <Modal isOpen={isLogoutModalOpen} onClose={() => setIsLogoutModalOpen(false)} title="Confirm Sign Out">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 text-amber-600">
+            <AlertCircle className="w-6 h-6" />
+            <p className="font-medium">Are you sure you want to sign out?</p>
+          </div>
+          <p className="text-sm text-gray-500">You will need to log in again to access the system.</p>
+          <div className="flex justify-end gap-3 pt-4">
+            <button 
+              onClick={() => setIsLogoutModalOpen(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              No, Stay
+            </button>
+            <button 
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            >
+              Yes, Sign Out
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -16,27 +16,45 @@ interface LivestockData {
   sex: 'Male' | 'Female';
   date_acquired: string;
   status: 'Healthy' | 'Sick' | 'Deceased';
+  birthdate: string;
+  health_status: string;
+  vaccination_status: string;
+  source_of_animal: string;
+  is_insured: boolean;
+  insurance_id: string;
+  last_vaccination_date: string;
 }
 
 export default function Livestock() {
   const [livestock, setLivestock] = useState<LivestockData[]>([]);
+  const [farmers, setFarmers] = useState<{id: string, name: string}[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSpecies, setFilterSpecies] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ 
     tagId: '', farmerName: '', species: 'Cattle', breed: '', color: '', 
-    weightKg: 0, purpose: 'Meat', age: '', sex: 'Male', dateAcquired: '', status: 'Healthy' 
+    weightKg: 0, purpose: 'Meat', age: '', sex: 'Male', dateAcquired: '', status: 'Healthy',
+    birthdate: '', healthStatus: 'Good', vaccinationStatus: 'Up to date',
+    sourceOfAnimal: 'Local Purchase', isInsured: false, insuranceId: '', lastVaccinationDate: ''
   });
 
   useEffect(() => {
     fetchLivestock();
+    fetchFarmers();
   }, []);
 
   const fetchLivestock = async () => {
     const { data, error } = await supabase.from('livestock').select('*').order('created_at', { ascending: false });
     if (data) setLivestock(data);
     if (error) console.error('Error fetching livestock:', error);
+  };
+
+  const fetchFarmers = async () => {
+    const { data, error } = await supabase.from('farmers').select('id, name').order('name');
+    if (data) setFarmers(data);
+    if (error) console.error('Error fetching farmers:', error);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,7 +71,14 @@ export default function Livestock() {
       age: formData.age,
       sex: formData.sex,
       date_acquired: formData.dateAcquired || null,
-      status: formData.status
+      status: formData.status,
+      birthdate: formData.birthdate || null,
+      health_status: formData.healthStatus,
+      vaccination_status: formData.vaccinationStatus,
+      source_of_animal: formData.sourceOfAnimal,
+      is_insured: formData.isInsured,
+      insurance_id: formData.insuranceId,
+      last_vaccination_date: formData.lastVaccinationDate || null
     };
 
     let error;
@@ -86,7 +111,14 @@ export default function Livestock() {
       age: item.age || '',
       sex: item.sex || 'Male',
       dateAcquired: item.date_acquired || '',
-      status: item.status || 'Healthy'
+      status: item.status || 'Healthy',
+      birthdate: item.birthdate || '',
+      healthStatus: item.health_status || 'Good',
+      vaccinationStatus: item.vaccination_status || 'Up to date',
+      sourceOfAnimal: item.source_of_animal || 'Local Purchase',
+      isInsured: !!item.is_insured,
+      insuranceId: item.insurance_id || '',
+      lastVaccinationDate: item.last_vaccination_date || ''
     });
     setEditingId(item.id);
     setIsModalOpen(true);
@@ -99,10 +131,69 @@ export default function Livestock() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} selected records?`)) {
+      const { error } = await supabase.from('livestock').delete().in('id', selectedIds);
+      if (!error) {
+        setSelectedIds([]);
+        fetchLivestock();
+      } else {
+        console.error('Error in bulk delete:', error);
+        alert('Failed to delete some records.');
+      }
+    }
+  };
+
+  const handleBulkStatusUpdate = async (status: string) => {
+    if (window.confirm(`Update status to ${status} for ${selectedIds.length} selected records?`)) {
+      const { error } = await supabase.from('livestock').update({ status }).in('id', selectedIds);
+      if (!error) {
+        setSelectedIds([]);
+        fetchLivestock();
+      } else {
+        console.error('Error in bulk status update:', error);
+        alert('Failed to update status.');
+      }
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredLivestock.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredLivestock.map(l => l.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ tagId: '', farmerName: '', species: 'Cattle', breed: '', color: '', weightKg: 0, purpose: 'Meat', age: '', sex: 'Male', dateAcquired: '', status: 'Healthy' });
+    setFormData({ 
+      tagId: '', 
+      farmerName: '', 
+      species: 'Cattle', 
+      breed: '', 
+      color: '', 
+      weightKg: 0, 
+      purpose: 'Meat', 
+      age: '', 
+      sex: 'Male', 
+      dateAcquired: '', 
+      status: 'Healthy',
+      birthdate: '',
+      healthStatus: 'Good',
+      vaccinationStatus: 'Up to date',
+      sourceOfAnimal: 'Local Purchase',
+      isInsured: false,
+      insuranceId: '',
+      lastVaccinationDate: ''
+    });
   };
 
   const filteredLivestock = livestock.filter(l => {
@@ -124,8 +215,8 @@ export default function Livestock() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex flex-1 gap-4 w-full">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input 
               type="text" 
@@ -135,20 +226,43 @@ export default function Livestock() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="relative">
-            <select 
-              className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e] focus:border-[#00965e]"
-              value={filterSpecies}
-              onChange={(e) => setFilterSpecies(e.target.value)}
-            >
-              <option value="All">All Species</option>
-              <option value="Cattle">Cattle</option>
-              <option value="Swine">Swine</option>
-              <option value="Poultry">Poultry</option>
-              <option value="Goat">Goat</option>
-            </select>
-            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-          </div>
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 bg-[#00965e]/10 px-3 py-1.5 rounded-lg border border-[#00965e]/20 animate-in fade-in slide-in-from-left-2">
+              <span className="text-sm font-bold text-[#00965e]">{selectedIds.length} selected</span>
+              <div className="h-4 w-px bg-gray-300 mx-1" />
+              <select 
+                onChange={(e) => handleBulkStatusUpdate(e.target.value)}
+                className="text-xs bg-white border border-gray-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-[#00965e]"
+                value=""
+              >
+                <option value="" disabled>Update Status</option>
+                <option value="Healthy">Healthy</option>
+                <option value="Sick">Sick</option>
+                <option value="Deceased">Deceased</option>
+              </select>
+              <button 
+                onClick={handleBulkDelete}
+                className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                title="Bulk Delete"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="relative">
+          <select 
+            className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e] focus:border-[#00965e]"
+            value={filterSpecies}
+            onChange={(e) => setFilterSpecies(e.target.value)}
+          >
+            <option value="All">All Species</option>
+            <option value="Cattle">Cattle</option>
+            <option value="Swine">Swine</option>
+            <option value="Poultry">Poultry</option>
+            <option value="Goat">Goat</option>
+          </select>
+          <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
@@ -164,6 +278,14 @@ export default function Livestock() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-sm uppercase tracking-wider">
+                <th className="px-6 py-4 font-medium w-10">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                    checked={selectedIds.length === filteredLivestock.length && filteredLivestock.length > 0}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="px-6 py-4 font-medium">Tag ID</th>
                 <th className="px-6 py-4 font-medium">Farmer</th>
                 <th className="px-6 py-4 font-medium">Details</th>
@@ -174,12 +296,22 @@ export default function Livestock() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredLivestock.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(item.id) ? 'bg-green-50/50' : ''}`}>
+                  <td className="px-6 py-4">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                      checked={selectedIds.includes(item.id)}
+                      onChange={() => toggleSelect(item.id)}
+                    />
+                  </td>
                   <td className="px-6 py-4 text-sm font-bold text-gray-900">{item.tag_id}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">{item.farmer_name}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">
                     <div className="font-medium text-gray-900">{item.species} - {item.breed}</div>
                     <div className="text-xs text-gray-500">{item.color} • {item.purpose}</div>
+                    <div className="text-xs text-blue-600 mt-1">Vax: {item.vaccination_status}</div>
+                    {item.is_insured && <div className="text-[10px] text-green-600 font-bold mt-0.5">INSURED: {item.insurance_id}</div>}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700">
                     <div>{item.age} ({item.sex})</div>
@@ -223,7 +355,17 @@ export default function Livestock() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Farmer Name</label>
-              <input required type="text" value={formData.farmerName} onChange={e => setFormData({...formData, farmerName: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+              <select 
+                required 
+                value={formData.farmerName} 
+                onChange={e => setFormData({...formData, farmerName: e.target.value})} 
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]"
+              >
+                <option value="">Select Farmer</option>
+                {farmers.map(f => (
+                  <option key={f.id} value={f.name}>{f.name}</option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -234,6 +376,9 @@ export default function Livestock() {
                 <option value="Swine">Swine</option>
                 <option value="Poultry">Poultry</option>
                 <option value="Goat">Goat</option>
+                <option value="Carabao">Carabao</option>
+                <option value="Sheep">Sheep</option>
+                <option value="Horse">Horse</option>
               </select>
             </div>
             <div>
@@ -264,7 +409,11 @@ export default function Livestock() {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Birthdate</label>
+              <input type="date" value={formData.birthdate} onChange={e => setFormData({...formData, birthdate: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Purpose</label>
               <select required value={formData.purpose} onChange={e => setFormData({...formData, purpose: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]">
@@ -274,9 +423,20 @@ export default function Livestock() {
                 <option value="Draft">Draft</option>
               </select>
             </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Date Acquired</label>
               <input type="date" value={formData.dateAcquired} onChange={e => setFormData({...formData, dateAcquired: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Health Status</label>
+              <select required value={formData.healthStatus} onChange={e => setFormData({...formData, healthStatus: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]">
+                <option value="Good">Good</option>
+                <option value="Fair">Fair</option>
+                <option value="Poor">Poor</option>
+                <option value="Critical">Critical</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
@@ -286,6 +446,28 @@ export default function Livestock() {
                 <option value="Deceased">Deceased</option>
               </select>
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Source of Animal</label>
+              <input type="text" value={formData.sourceOfAnimal} onChange={e => setFormData({...formData, sourceOfAnimal: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Last Vaccination Date</label>
+              <input type="date" value={formData.lastVaccinationDate} onChange={e => setFormData({...formData, lastVaccinationDate: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 items-end">
+            <div className="flex items-center gap-2 pb-2">
+              <input type="checkbox" checked={formData.isInsured} onChange={e => setFormData({...formData, isInsured: e.target.checked})} className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded" />
+              <label className="text-sm font-medium text-gray-700">Is Insured?</label>
+            </div>
+            {formData.isInsured && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Insurance ID</label>
+                <input type="text" value={formData.insuranceId} onChange={e => setFormData({...formData, insuranceId: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#00965e] focus:border-[#00965e]" />
+              </div>
+            )}
           </div>
           <div className="pt-4 flex justify-end gap-3">
             <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">Cancel</button>

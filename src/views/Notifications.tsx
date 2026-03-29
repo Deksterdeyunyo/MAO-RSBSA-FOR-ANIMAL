@@ -7,7 +7,10 @@ interface Notification {
   title: string;
   message: string;
   type: 'info' | 'warning' | 'success';
+  priority: 'Low' | 'Medium' | 'High';
+  category: string;
   read: boolean;
+  action_url?: string;
   created_at: string;
 }
 
@@ -110,9 +113,15 @@ export default function Notifications() {
               </div>
               <div className="flex-1">
                 <div className="flex justify-between items-start">
-                  <h3 className={`text-sm font-semibold ${notification.read ? 'text-gray-700' : 'text-gray-900'}`}>
-                    {notification.title}
-                  </h3>
+                  <div className="flex flex-col">
+                    <h3 className={`text-sm font-semibold ${notification.read ? 'text-gray-700' : 'text-gray-900'}`}>
+                      {notification.title}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] uppercase font-bold text-gray-400">{notification.category || 'General'}</span>
+                      {notification.priority === 'High' && <span className="text-[10px] uppercase font-bold text-red-500">High Priority</span>}
+                    </div>
+                  </div>
                   <span className="flex items-center gap-1 text-xs text-gray-500 whitespace-nowrap ml-4">
                     <Clock className="w-3.5 h-3.5" />
                     {new Date(notification.created_at).toLocaleDateString()}

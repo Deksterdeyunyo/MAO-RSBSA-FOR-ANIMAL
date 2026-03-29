@@ -23,6 +23,7 @@ export default function Inventory() {
   const [customFilterCategory, setCustomFilterCategory] = useState('');
   const [isCustomFilter, setIsCustomFilter] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategory, setCustomCategory] = useState('');
@@ -118,6 +119,33 @@ export default function Inventory() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} selected items?`)) {
+      const { error } = await supabase.from('inventory').delete().in('id', selectedIds);
+      if (!error) {
+        setSelectedIds([]);
+        fetchInventory();
+      } else {
+        console.error('Error in bulk delete:', error);
+        alert('Failed to delete some records.');
+      }
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredItems.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredItems.map(i => i.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
@@ -149,8 +177,8 @@ export default function Inventory() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex flex-1 gap-4 w-full">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input 
               type="text" 
@@ -160,40 +188,53 @@ export default function Inventory() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="relative flex items-center gap-2">
-            <select 
-              className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e] focus:border-[#00965e]"
-              value={filterCategory}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === 'Custom') {
-                  setIsCustomFilter(true);
-                  setFilterCategory('Custom');
-                } else {
-                  setIsCustomFilter(false);
-                  setFilterCategory(val);
-                  setCustomFilterCategory('');
-                }
-              }}
-            >
-              <option value="All">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-              <option value="Custom">Custom Category...</option>
-            </select>
-            {!isCustomFilter && <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />}
-            
-            {isCustomFilter && (
-              <input
-                type="text"
-                placeholder="Enter category..."
-                value={customFilterCategory}
-                onChange={(e) => setCustomFilterCategory(e.target.value)}
-                className="w-40 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e] focus:border-[#00965e]"
-              />
-            )}
-          </div>
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 bg-[#00965e]/10 px-3 py-1.5 rounded-lg border border-[#00965e]/20 animate-in fade-in slide-in-from-left-2">
+              <span className="text-sm font-bold text-[#00965e]">{selectedIds.length} selected</span>
+              <div className="h-4 w-px bg-gray-300 mx-1" />
+              <button 
+                onClick={handleBulkDelete}
+                className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                title="Bulk Delete"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="relative flex items-center gap-2">
+          <select 
+            className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e] focus:border-[#00965e]"
+            value={filterCategory}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === 'Custom') {
+                setIsCustomFilter(true);
+                setFilterCategory('Custom');
+              } else {
+                setIsCustomFilter(false);
+                setFilterCategory(val);
+                setCustomFilterCategory('');
+              }
+            }}
+          >
+            <option value="All">All Categories</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+            <option value="Custom">Custom Category...</option>
+          </select>
+          {!isCustomFilter && <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />}
+          
+          {isCustomFilter && (
+            <input
+              type="text"
+              placeholder="Enter category..."
+              value={customFilterCategory}
+              onChange={(e) => setCustomFilterCategory(e.target.value)}
+              className="w-40 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e] focus:border-[#00965e]"
+            />
+          )}
         </div>
         <button 
           onClick={() => {
@@ -214,6 +255,14 @@ export default function Inventory() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-sm uppercase tracking-wider">
+                <th className="px-6 py-4 font-medium w-10">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                    checked={selectedIds.length === filteredItems.length && filteredItems.length > 0}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="px-6 py-4 font-medium">Item Name & Batch</th>
                 <th className="px-6 py-4 font-medium">Category</th>
                 <th className="px-6 py-4 font-medium">Stock Level</th>
@@ -227,7 +276,15 @@ export default function Inventory() {
                 const isExpired = item.expiration_date && new Date(item.expiration_date) < new Date();
                 
                 return (
-                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(item.id) ? 'bg-green-50/50' : ''}`}>
+                    <td className="px-6 py-4">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-[#00965e] focus:ring-[#00965e] border-gray-300 rounded cursor-pointer"
+                        checked={selectedIds.includes(item.id)}
+                        onChange={() => toggleSelect(item.id)}
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                         {item.item_name}
