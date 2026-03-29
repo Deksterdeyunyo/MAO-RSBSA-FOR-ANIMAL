@@ -338,7 +338,7 @@ export default function UserManagement() {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit User" : "Add New User"}>
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit User" : "Add New User"} size="2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>

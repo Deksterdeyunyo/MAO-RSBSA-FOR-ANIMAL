@@ -341,7 +341,7 @@ export default function FieldInspection({ userRole }: { userRole?: string }) {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Field Inspection" : "Log Field Inspection"}>
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Field Inspection" : "Log Field Inspection"} size="2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>

@@ -341,7 +341,7 @@ export default function ProgramDistribution({ userRole }: { userRole?: string })
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Distribution Program" : "New Distribution Program"}>
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Distribution Program" : "New Distribution Program"} size="2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>

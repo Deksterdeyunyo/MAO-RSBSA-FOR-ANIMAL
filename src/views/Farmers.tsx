@@ -393,7 +393,7 @@ export default function Farmers({ userRole }: { userRole?: string }) {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Farmer" : "Add New Farmer"}>
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Farmer" : "Add New Farmer"} size="2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -514,7 +514,7 @@ export default function Farmers({ userRole }: { userRole?: string }) {
         </form>
       </Modal>
 
-      <Modal isOpen={isLivestockModalOpen} onClose={() => setIsLivestockModalOpen(false)} title={`Livestock for ${selectedFarmer?.name}`}>
+      <Modal isOpen={isLivestockModalOpen} onClose={() => setIsLivestockModalOpen(false)} title={`Livestock for ${selectedFarmer?.name}`} size="lg">
         <div className="space-y-4">
           {farmerLivestock.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 max-h-[60vh] overflow-y-auto pr-2">

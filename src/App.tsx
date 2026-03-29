@@ -7,7 +7,6 @@ import Livestock from './views/Livestock';
 import HealthServices from './views/HealthServices';
 import ProgramDistribution from './views/ProgramDistribution';
 import FieldInspection from './views/FieldInspection';
-import Geotagging from './views/Geotagging';
 import Inventory from './views/Inventory';
 import Notifications from './views/Notifications';
 import UserManagement from './views/UserManagement';
@@ -16,7 +15,7 @@ import Reports from './views/Reports';
 import Schedule from './views/Schedule';
 import { supabase } from './lib/supabase';
 
-export type ViewType = 'Dashboard' | 'Farmers' | 'Livestock' | 'Health Services' | 'Program Distribution' | 'Field Inspection' | 'Geotagging & Map' | 'Inventory' | 'Notifications' | 'User Management' | 'Reports' | 'Schedule';
+export type ViewType = 'Dashboard' | 'Farmers' | 'Livestock' | 'Health Services' | 'Program Distribution' | 'Field Inspection' | 'Inventory' | 'Notifications' | 'User Management' | 'Reports' | 'Schedule';
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
@@ -87,7 +86,6 @@ export default function App() {
       'User Management': ['Admin'],
       'Reports': ['Admin', 'Technician'],
       'Dashboard': ['Admin', 'Technician', 'Staff'],
-      'Geotagging & Map': ['Admin', 'Technician', 'Staff'],
       'Inventory': ['Admin', 'Technician', 'Staff'],
       'Schedule': ['Admin', 'Technician', 'Staff'],
       'Notifications': ['Admin', 'Technician', 'Staff'],
@@ -108,7 +106,6 @@ export default function App() {
       case 'Health Services': return <HealthServices userRole={userRole} />;
       case 'Program Distribution': return <ProgramDistribution userRole={userRole} />;
       case 'Field Inspection': return <FieldInspection userRole={userRole} />;
-      case 'Geotagging & Map': return <Geotagging userRole={userRole} />;
       case 'Inventory': return <Inventory userRole={userRole} />;
       case 'Notifications': return <Notifications />;
       case 'User Management': return <UserManagement />;
@@ -127,7 +124,7 @@ export default function App() {
         <div className="print:hidden">
           <Header title={activeView} />
         </div>
-        <main className={`flex-1 overflow-x-hidden overflow-y-auto print:overflow-visible bg-gray-50 print:p-0 print:bg-white ${activeView === 'Geotagging & Map' ? 'p-0' : 'p-6'}`}>
+        <main className={`flex-1 overflow-x-hidden overflow-y-auto print:overflow-visible bg-gray-50 print:p-0 print:bg-white p-6`}>
           {renderView()}
         </main>
       </div>

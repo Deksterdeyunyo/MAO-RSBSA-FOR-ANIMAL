@@ -407,7 +407,7 @@ export default function Inventory({ userRole }: { userRole?: string }) {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Inventory Item" : "Add Inventory Item"}>
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Inventory Item" : "Add Inventory Item"} size="2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
             <label className="block text-sm font-bold text-gray-900 mb-2">Category (Required First) *</label>

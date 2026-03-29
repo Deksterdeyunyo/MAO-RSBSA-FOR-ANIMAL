@@ -361,7 +361,7 @@ export default function HealthServices({ userRole }: { userRole?: string }) {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Health Service" : "Record Health Service"}>
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Health Service" : "Record Health Service"} size="2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>

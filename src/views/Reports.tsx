@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, Filter, Download } from 'lucide-react';
+import { Printer, Filter, Download, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function Reports() {
@@ -321,128 +321,94 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      {/* Controls (Hidden on print) */}
-      <div className="print:hidden flex flex-col gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative">
-              <select
-                value={reportType}
-                onChange={(e) => { setReportType(e.target.value); setCategory('All'); setIsCustomCategory(false); setCustomCategory(''); }}
-                className="appearance-none bg-gray-50 border border-gray-300 text-gray-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e]"
-              >
-                <option value="livestock">Livestock Inventory Report</option>
-                <option value="farmers">Registered Farmers Report</option>
-                <option value="health">Health Services Log</option>
-                <option value="distributions">Program Distributions Report</option>
-                <option value="inventory">Inventory Stock Report</option>
-              </select>
-              <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-            </div>
-            
-            {renderCategoryFilter()}
-            
-            <div className="flex items-center gap-2">
-              <input 
-                type="month" 
-                value={month}
-                onChange={(e) => { setMonth(e.target.value); setStartDate(''); setEndDate(''); }}
-                className="bg-gray-50 border border-gray-300 text-gray-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e]"
-                title="Filter by Month"
-              />
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
+        <p className="text-gray-500">Generate and export system reports</p>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Report Settings */}
+        <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Report Settings</h2>
+          
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Select Report Type</label>
+              <div className="space-y-3">
+                {[
+                  { value: 'inventory', label: 'Current Inventory', desc: 'List of all available items' },
+                  { value: 'farmers', label: 'Registered Recipients', desc: 'List of all RSBSA farmers' },
+                  { value: 'distributions', label: 'Distribution Summary', desc: 'Aggregated distribution totals' },
+                  { value: 'distributions_by_recipient', label: 'Distribution by Recipient', desc: 'Aggregated items per farmer' },
+                ].map((type) => (
+                  <label key={type.value} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input 
+                      type="radio" 
+                      name="reportType" 
+                      value={type.value} 
+                      checked={reportType === type.value}
+                      onChange={(e) => setReportType(e.target.value)}
+                      className="mt-1 text-[#00965e] focus:ring-[#00965e]"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">{type.label}</div>
+                      <div className="text-xs text-gray-500">{type.desc}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">or</span>
-              <input 
-                type="date" 
-                value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setMonth(''); }}
-                className="bg-gray-50 border border-gray-300 text-gray-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e]"
-                title="Start Date"
-              />
-              <span className="text-sm text-gray-500">to</span>
-              <input 
-                type="date" 
-                value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setMonth(''); }}
-                className="bg-gray-50 border border-gray-300 text-gray-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e]"
-                title="End Date"
-              />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Filters</label>
+              <div className="space-y-3">
+                <label className="block text-xs text-gray-500">Category</label>
+                <select 
+                  value={category} 
+                  onChange={handleCategoryChange} 
+                  className="w-full bg-gray-50 border border-gray-300 text-gray-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e]"
+                >
+                  <option value="All">All Categories</option>
+                  {/* Add other options dynamically based on reportType if needed */}
+                </select>
+              </div>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <input 
-                type="text" 
-                placeholder="Generated By..." 
-                value={generatedBy}
-                onChange={(e) => setGeneratedBy(e.target.value)}
-                className="bg-gray-50 border border-gray-300 text-gray-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00965e]"
-              />
+
+            <div className="pt-4 space-y-3">
+              <button
+                onClick={handlePrint}
+                className="w-full flex items-center justify-center gap-2 bg-[#00965e] text-white px-4 py-2 rounded-lg hover:bg-[#007a4c] transition-colors shadow-sm"
+              >
+                <Printer className="w-5 h-5" />
+                <span>Generate PDF</span>
+              </button>
+              <button
+                onClick={exportToCSV}
+                className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                <Download className="w-5 h-5" />
+                <span>Export CSV</span>
+              </button>
             </div>
+          </div>
+        </div>
+
+        {/* Report Preview */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-gray-500" />
+              Report Preview
+            </h2>
+            <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{data.length} records</span>
           </div>
           
-          <div className="flex items-center gap-3">
-            <button
-              onClick={exportToCSV}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-            >
-              <Download className="w-5 h-5" />
-              <span>Export CSV</span>
-            </button>
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 bg-[#00965e] text-white px-4 py-2 rounded-lg hover:bg-[#007a4c] transition-colors shadow-sm"
-            >
-              <Printer className="w-5 h-5" />
-              <span>Print Report</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Printable Area */}
-      <div id="printable-area" className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 print:shadow-none print:border-none print:p-0">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-wider">
-            {reportType === 'livestock' ? 'Livestock Inventory Report' :
-             reportType === 'farmers' ? 'Registered Farmers Report' :
-             reportType === 'health' ? 'Health Services Report' :
-             reportType === 'inventory' ? 'Inventory Stock Report' :
-             'Program Distributions Report'}
-          </h1>
-          <p className="text-gray-500 mt-2">Generated on {new Date().toLocaleDateString()} by {generatedBy}</p>
-          {(startDate || endDate || month || category !== 'All') && (
-            <p className="text-gray-500 text-sm mt-1">
-              Filters applied: 
-              {category !== 'All' && !isCustomCategory && ` Category: ${category} |`}
-              {isCustomCategory && customCategory && ` Category: ${customCategory} |`}
-              {month && ` Month: ${month} |`}
-              {startDate && ` From: ${startDate} |`}
-              {endDate && ` To: ${endDate}`}
-            </p>
+          {loading ? (
+            <div className="text-center py-12 text-gray-500">Loading report data...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              {renderTable()}
+            </div>
           )}
-          <p className="text-gray-500 mt-1">Total Records: {data.length}</p>
-          {reportNotes && <p className="text-gray-700 mt-4 italic text-sm">Notes: {reportNotes}</p>}
-        </div>
-
-        {loading ? (
-          <div className="text-center py-12 text-gray-500">Loading report data...</div>
-        ) : (
-          <div className="overflow-x-auto print:overflow-visible">
-            {renderTable()}
-          </div>
-        )}
-
-        <div className="mt-16 pt-8 border-t border-gray-200 flex justify-between print:flex hidden">
-          <div className="text-center">
-            <div className="w-48 border-b border-gray-800 mb-2 font-bold">{generatedBy}</div>
-            <p className="text-sm text-gray-600">Prepared By</p>
-          </div>
-          <div className="text-center">
-            <div className="w-48 border-b border-gray-800 mb-2"></div>
-            <p className="text-sm text-gray-600">Approved By</p>
-          </div>
         </div>
       </div>
     </div>

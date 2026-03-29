@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sprout, LayoutDashboard, Users, Dog, Syringe, Package, ClipboardCheck, Map, Bell, UserCog, LogOut, FileText, Box, Calendar, AlertCircle } from 'lucide-react';
+import { Sprout, LayoutDashboard, Users, Dog, Syringe, Package, ClipboardCheck, Bell, UserCog, LogOut, FileText, Box, Calendar, AlertCircle } from 'lucide-react';
 import { ViewType } from '../App';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
@@ -22,7 +22,6 @@ export default function Sidebar({ activeView, setActiveView, userRole = 'Staff',
     { name: 'Health Services', icon: Syringe, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
     { name: 'Program Distribution', icon: Package, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
     { name: 'Field Inspection', icon: ClipboardCheck, roles: ['Admin', 'Technician', 'Staff', 'Encoder'] },
-    { name: 'Geotagging & Map', icon: Map, roles: ['Admin', 'Technician', 'Staff'] },
     { name: 'Inventory', icon: Box, roles: ['Admin', 'Technician', 'Staff'] },
     { name: 'Schedule', icon: Calendar, roles: ['Admin', 'Technician', 'Staff'] },
     { name: 'Reports', icon: FileText, roles: ['Admin', 'Technician'] },
@@ -84,7 +83,7 @@ export default function Sidebar({ activeView, setActiveView, userRole = 'Staff',
         </button>
       </div>
 
-      <Modal isOpen={isLogoutModalOpen} onClose={() => setIsLogoutModalOpen(false)} title="Confirm Sign Out">
+      <Modal isOpen={isLogoutModalOpen} onClose={() => setIsLogoutModalOpen(false)} title="Confirm Sign Out" size="2xl">
         <div className="space-y-4">
           <div className="flex items-center gap-3 text-amber-600">
             <AlertCircle className="w-6 h-6" />

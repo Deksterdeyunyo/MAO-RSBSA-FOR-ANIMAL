@@ -368,7 +368,7 @@ export default function Livestock({ userRole }: { userRole?: string }) {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Livestock" : "Add Livestock"}>
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Livestock" : "Add Livestock"} size="2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>

@@ -196,7 +196,7 @@ export default function Schedule() {
         )}
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Schedule" : "Add New Schedule"}>
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? "Edit Schedule" : "Add New Schedule"} size="2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Program Title</label>
