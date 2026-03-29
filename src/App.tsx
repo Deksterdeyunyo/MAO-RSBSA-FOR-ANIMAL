@@ -104,7 +104,7 @@ export default function App() {
         <div className="print:hidden">
           <Header title={activeView} />
         </div>
-        <main className="flex-1 overflow-x-hidden overflow-y-auto print:overflow-visible bg-gray-50 p-6 print:p-0 print:bg-white">
+        <main className={`flex-1 overflow-x-hidden overflow-y-auto print:overflow-visible bg-gray-50 print:p-0 print:bg-white ${activeView === 'Geotagging & Map' ? 'p-0' : 'p-6'}`}>
           {renderView()}
         </main>
       </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MapPin, Search, Filter, Layers, Info, Navigation, Check, X, Locate, User, Phone, Calendar, Home, Briefcase, Activity } from 'lucide-react';
+import { MapPin, Search, Filter, Layers, Info, Navigation, Check, X, Locate, User, Phone, Calendar, Home, Briefcase, Activity, Maximize } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { supabase } from '../lib/supabase';
@@ -58,6 +58,17 @@ function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: number) => v
   return null;
 }
 
+function FitBounds({ locations, trigger }: { locations: FarmLocation[], trigger: number }) {
+  const map = useMap();
+  useEffect(() => {
+    if (locations.length > 0) {
+      const bounds = L.latLngBounds(locations.map(loc => [loc.lat, loc.lng]));
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [locations, map, trigger]);
+  return null;
+}
+
 export default function Geotagging() {
   const [locations, setLocations] = useState<FarmLocation[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,6 +84,7 @@ export default function Geotagging() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [addressSearch, setAddressSearch] = useState('');
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const [fitTrigger, setFitTrigger] = useState(0);
 
   useEffect(() => {
     fetchLocations();
@@ -134,15 +146,9 @@ export default function Geotagging() {
         });
         setLocations(processedLocations);
         
-        const firstWithCoords = processedLocations.find(l => {
-          const f = farmers.find(farm => farm.id === l.id);
-          return f?.latitude && f?.longitude;
-        });
-
-        if (firstWithCoords) {
-          setMapCenter([firstWithCoords.lat, firstWithCoords.lng]);
-        } else if (processedLocations.length > 0) {
-          setMapCenter([processedLocations[0].lat, processedLocations[0].lng]);
+        // Trigger fit bounds on initial load if we have locations
+        if (processedLocations.length > 0) {
+          setFitTrigger(prev => prev + 1);
         }
       }
     } catch (error) {
@@ -235,6 +241,12 @@ export default function Geotagging() {
     setZoom(16);
   };
 
+  const fitAll = () => {
+    if (filteredLocations.length > 0) {
+      setFitTrigger(prev => prev + 1);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch(status) {
       case 'Alert': return 'text-red-600';
@@ -244,9 +256,9 @@ export default function Geotagging() {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col space-y-4">
+    <div className="h-[calc(100vh-4rem)] flex flex-col space-y-0">
       {/* Header Controls */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 shrink-0">
+      <div className="p-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 shrink-0 bg-white border-b border-gray-200 shadow-sm z-20">
         <div className="flex flex-1 gap-4 w-full">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -310,9 +322,9 @@ export default function Geotagging() {
         )}
       </div>
 
-      <div className="flex-1 flex gap-4 overflow-hidden">
+      <div className="flex-1 flex overflow-hidden">
         {/* Sidebar List */}
-        <div className="w-80 bg-white rounded-xl border border-gray-200 flex flex-col overflow-hidden shadow-sm hidden md:flex">
+        <div className="w-80 bg-white border-r border-gray-200 flex flex-col overflow-hidden shadow-sm hidden md:flex z-10">
           <div className="p-4 border-b border-gray-100 bg-gray-50/50">
             <h3 className="font-bold text-gray-900 flex items-center gap-2">
               <Layers className="w-4 h-4 text-green-600" />
@@ -354,7 +366,7 @@ export default function Geotagging() {
         </div>
 
         {/* Map Area */}
-        <div className="flex-1 bg-white rounded-xl border border-gray-200 overflow-hidden relative shadow-sm">
+        <div className="flex-1 bg-white overflow-hidden relative">
           {/* Address Search Overlay */}
           <div className="absolute top-6 left-6 z-[1000] w-full max-w-xs">
             <form onSubmit={handleAddressSearch} className="flex gap-2">
@@ -400,6 +412,7 @@ export default function Geotagging() {
                   />
                 )}
                 <ChangeView center={mapCenter} zoom={zoom} />
+                <FitBounds locations={filteredLocations} trigger={fitTrigger} />
                 <MapEvents onMapClick={handleMapClick} />
                 
                 {filteredLocations.map((loc) => (
@@ -492,6 +505,13 @@ export default function Geotagging() {
 
               {/* Map Controls */}
               <div className="absolute top-6 right-6 flex flex-col gap-2 z-[1000]">
+                <button 
+                  onClick={fitAll}
+                  className="p-2.5 bg-white rounded-xl border border-gray-200 shadow-lg hover:bg-gray-50 transition-all text-green-600 active:scale-90"
+                  title="Show All Farmers"
+                >
+                  <Maximize className="w-5 h-5" />
+                </button>
                 <button 
                   onClick={() => { setMapCenter([14.5995, 120.9842]); setZoom(13); }}
                   className="p-2.5 bg-white rounded-xl border border-gray-200 shadow-lg hover:bg-gray-50 transition-all text-gray-600 active:scale-90"
