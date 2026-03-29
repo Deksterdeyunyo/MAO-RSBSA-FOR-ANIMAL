@@ -40,21 +40,6 @@ export default function UserManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // If creating a new user, we also need to sign them up in Supabase Auth
-    if (!editingId && formData.password) {
-      const tempClient = createTempClient();
-      const { error: signUpError } = await tempClient.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (signUpError) {
-        console.error('Error signing up user:', signUpError);
-        alert(`Failed to create auth account: ${signUpError.message}`);
-        return;
-      }
-    }
-
     const payload: any = {
       name: formData.name,
       full_name: formData.fullName,
@@ -69,12 +54,41 @@ export default function UserManagement() {
       payload.password = formData.password;
     }
 
+    // If creating a new user, we also need to sign them up in Supabase Auth
+    if (!editingId && formData.password) {
+      const tempClient = createTempClient();
+      const { data: signUpData, error: signUpError } = await tempClient.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.fullName,
+            role: formData.role,
+            department: formData.department,
+            phone_number: formData.phoneNumber
+          }
+        }
+      });
+
+      if (signUpError) {
+        console.error('Error signing up user:', signUpError);
+        alert(`Failed to create auth account: ${signUpError.message}`);
+        return;
+      }
+
+      // If we have the user ID from the signup, use it for the database record
+      if (signUpData.user) {
+        payload.id = signUpData.user.id;
+      }
+    }
+
     let error;
     if (editingId) {
       const { error: updateError } = await supabase.from('users_management').update(payload).eq('id', editingId);
       error = updateError;
     } else {
-      const { error: insertError } = await supabase.from('users_management').insert([payload]);
+      // Use upsert to handle cases where the trigger might have already created the record
+      const { error: insertError } = await supabase.from('users_management').upsert([payload]);
       error = insertError;
     }
     
